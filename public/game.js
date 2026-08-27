@@ -9,11 +9,11 @@
   });
 
   const CONFIG = Object.freeze({
-    finalDistance: 32000,
+    finalDistance: 31500,
     endingAt: 0.92,
     maxAltitude: 7600,
     minAltitude: 110,
-    cruiseSpeed: 155,
+    cruiseSpeed: 158,
     obstacleGap: [680, 1150],
     collisionFuelLoss: 11,
     invulnerabilitySeconds: 1.8
@@ -171,7 +171,7 @@
       if (this.blinkTimer <= 0) { this.blink = .14; this.blinkTimer = 2 + Math.random() * 3.5; }
       this.blink = Math.max(0, this.blink - dt);
       const intensive = Math.abs(verticalInput) + Math.abs(horizontalInput) * .5;
-      this.fuel = Math.max(0, this.fuel - dt * (.052 + intensive * .018));
+      this.fuel = Math.max(0, this.fuel - dt * (.18 + intensive * .018));
     }
     collide() {
       if (this.invulnerability > 0) return false;

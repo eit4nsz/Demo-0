@@ -27,8 +27,10 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 | Combustible e invulnerabilidad | Preservados y probados |
 | Pausa, reanudación y reinicio | Implementados y probados |
 | Escenarios, landmarks y final | Implementados |
+| Avión comercial, piloto y tortuga pasajera | Implementados en Iteración 2 |
+| Duración total | 180,62 s; validada en Iteración 2 |
 | Responsive | Validado en tres resoluciones objetivo |
-| Consola | 0 errores después de Iteración 1 |
+| Consola | 0 errores después de Iteración 2 |
 | Build y versión autocontenida | Implementados y validados |
 
 ## 3. Tecnologías y lenguajes
@@ -114,7 +116,7 @@ D:\HTML\Escuela de aviación\
 - **`ObstacleManager`:** generación, actualización, limpieza y colisión mundial.
 - **`ParticleSystem`:** partículas livianas de impacto y motor.
 - **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno, atmósfera y landmarks.
-- **`PlaneRenderer`:** representa el estado del jugador; no controla la física.
+- **`PlaneRenderer`:** dibuja un avión comercial original con dos motores, ventanas, luces, piloto y tortuga pasajera; representa el estado del jugador sin controlar la física.
 - **`UIManager`:** HUD, mensajes, regiones y overlays.
 - **`Game`:** ciclo de vida, estados, límites, progresión, render y coordinación.
 
@@ -297,15 +299,81 @@ Las diagonales registraron simultáneamente 261–269 px en X y 44–45 px en Y.
 
 Prueba práctica: con la semilla determinista, la ruta sin maniobra colisionó y bajó combustible de 100 % a 89 %. Repitiendo con W+D se alcanzó la misma distancia sin impacto y con 100 %.
 
-## 16. Pendientes fuera de esta iteración
+## 16. Iteración 2 — Avión comercial y ritmo
 
-- Validación adicional en dispositivo táctil físico; la emulación `390×844` pasó.
-- Cualquier rediseño móvil debe ser una iteración independiente.
-- Audio, escenarios, sprites y mejoras artísticas permanecen fuera de Iteración 1.
-- No se inició Iteración 2.
+### Rediseño visual
 
-## 17. Estado
+El avión de hélice fue reemplazado por una aeronave comercial original dibujada completamente con Canvas 2D:
 
-La arquitectura conserva la separación entre entrada, física, cámara, render y UI. El movimiento permite cambiar trayectoria, recorrer zonas útiles y esquivar obstáculos sin romper colisiones, pausa, reinicio ni responsive.
+- fuselaje largo con nariz redondeada y degradado metálico;
+- estabilizador vertical, estabilizador horizontal y alas barridas;
+- dos turbinas bajo las alas, una en segundo plano;
+- tomas de aire, brillo de motor y estelas tenues;
+- ocho ventanas con iluminación cálida;
+- luces roja, verde y blanca intermitente;
+- humo procedente de la zona de motores durante el final;
+- escala responsive de 82 % en pantallas estrechas y 100 % en escritorio;
+- pitch visual limitado a `-0.22…0.20` radianes para una inclinación comercial creíble.
 
-**ITERACIÓN 1: COMPLETADA**
+No queda ninguna hélice, marca, aerolínea ni modelo real copiado.
+
+### Personajes
+
+- La piloto es una mujer dentro del cockpit, con cabello y moño discretos, gorra, uniforme oscuro, cuello claro, brazo al mando y reacción sutil a impactos.
+- La tortuga dejó de ser piloto y aparece como pasajera en una ventana cálida del fuselaje.
+- La tortuga conserva parpadeo, movimiento leve de cabeza, reacción a impactos y mirada ascendente durante el final.
+
+### Hitbox
+
+La hitbox no se amplió hasta cubrir toda la silueta. Permanece centrada en el fuselaje principal con radio 26, evitando penalizaciones por cola, punta de ala o nariz. Una prueba a 70 unidades no colisiona; una superposición central sí reduce combustible de 100 % a 89 % y activa 1.8 s de invulnerabilidad.
+
+### Ritmo antes y después
+
+Medición previa usando el bucle real y la fórmula de velocidad progresiva:
+
+| Medida | Antes | Después |
+|---|---:|---:|
+| `CONFIG.finalDistance` | 32000 | 31500 |
+| `CONFIG.cruiseSpeed` | 155 | 158 |
+| Consumo base por segundo | 0.052 | 0.18 |
+| Inicio → comienzo del final | 174.80 s | 169.12 s |
+| Inicio → pantalla final | 186.30 s | 180.62 s |
+| Combustible sin impactos al comenzar el final | 90.9 % | 69.6 % |
+
+El recorrido anterior ya duraba aproximadamente 3:06, no 8–10 minutos. Por eso el ajuste se mantuvo conservador para no salir del rango solicitado. La nueva partida dura aproximadamente 3:01, aumenta ligeramente el ritmo y conserva el tiempo de reacción.
+
+Los landmarks siguen basados en porcentajes. No fue necesario modificar sus posiciones: París, Egipto, Nueva York, Río, Japón y la costa conservan orden y separación, mientras atmósfera, espacio y Luna continúan usando la progresión global hasta el 92 %.
+
+## 17. Pruebas de Iteración 2
+
+- [x] El avión se reconoce como comercial y no tiene hélice.
+- [x] Dos motores, ventanas, cockpit y luces visibles.
+- [x] Piloto mujer visible dentro de la cabina.
+- [x] Tortuga visible como pasajera y animada.
+- [x] W, S, A, D y las cuatro flechas preservados.
+- [x] W+D, W+A, S+D y S+A preservados.
+- [x] Pitch visual limitado sin modificar la física.
+- [x] Hitbox central justa y extremos decorativos excluidos.
+- [x] Evasión de obstáculo con 99.6 % de combustible restante.
+- [x] Colisión central, penalización e invulnerabilidad.
+- [x] Pausa, reanudación y reinicio.
+- [x] Partida completa simulada con el `Game.update` real a 60 FPS.
+- [x] Pantalla final a 180.62 s y combustible final en 0 %.
+- [x] Ciudad, París, Egipto, Nueva York, Río, Japón y costa.
+- [x] Progresión posterior por atmósfera, espacio y Luna hasta el final.
+- [x] Responsive en `390×844`, `1366×768` y `1920×1080`.
+- [x] Controles táctiles visibles en `390×844`.
+- [x] Consola con 0 errores y 0 advertencias relevantes.
+- [x] `npm run build` completado.
+
+## 18. Pendientes fuera de esta iteración
+
+- Validación adicional en un dispositivo táctil físico; la emulación `390×844` pasó.
+- Audio, nuevos escenarios, obstáculos, HUD y controles permanecen fuera de Iteración 2.
+- No se inició ninguna Iteración 3.
+
+## 19. Estado
+
+El juego conserva el movimiento protegido de Iteración 1, ahora presenta una aeronave comercial con piloto y tortuga pasajera, y completa todo el recorrido narrativo en aproximadamente tres minutos sin perder escenarios ni romper colisiones, pausa, reinicio o responsive.
+
+**ITERACIÓN 2: COMPLETADA**
