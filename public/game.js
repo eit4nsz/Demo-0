@@ -10,12 +10,12 @@
 
   const CONFIG = Object.freeze({
     finalDistance: 14800,
-    endingAt: 0.9,
+    approachAt: 0.86,
     maxAltitude: 7600,
     minAltitude: 110,
     cruiseSpeed: 174,
     routeSpeedBoost: 36,
-    endingDuration: 10,
+    arrivalDurations: Object.freeze({ approach: 3.5, landing: 4.5, taxi: 4, disembark: 5 }),
     obstacleGap: [540, 1250],
     obstacleSpeed: [18, 132],
     obstacleAmplitude: [12, 88],
@@ -159,6 +159,9 @@
       this.hitReaction = 0;
       this.blinkTimer = 2.2;
       this.blink = 0;
+      this.gearProgress = 0;
+      this.doorProgress = 0;
+      this.turtleExitProgress = 0;
     }
     update(dt, input, progress, viewWidth, controlsEnabled = true) {
       const verticalInput = controlsEnabled ? Number(input.up) - Number(input.down) : 0;
@@ -309,15 +312,18 @@
     render(ctx, view, game) {
       const { width: w, height: h } = view;
       const progress = game.progress;
-      const altitudeRatio = clamp(game.player.position.y / CONFIG.maxAltitude, 0, 1);
-      this.drawSky(ctx, w, h, progress, altitudeRatio);
-      this.drawStars(ctx, w, h, progress, altitudeRatio, game.time, game.camera.x);
-      this.drawMoon(ctx, w, h, progress, game.time);
-      this.drawAtmosphere(ctx, w, h, progress, altitudeRatio);
-      this.drawCloudLayer(ctx, w, h, progress, game.camera, game.time, 0);
-      this.drawTerrain(ctx, w, h, progress, game.time);
-      this.drawLandmarks(ctx, w, h, progress, game.camera.x);
-      this.drawCloudLayer(ctx, w, h, progress, game.camera, game.time, 1);
+      const arrival = game.arrivalSceneProgress;
+      const sceneProgress = lerp(progress, .16, arrival);
+      const altitudeRatio = lerp(clamp(game.player.position.y / CONFIG.maxAltitude, 0, 1), .08, arrival);
+      this.drawSky(ctx, w, h, sceneProgress, altitudeRatio);
+      this.drawStars(ctx, w, h, sceneProgress, altitudeRatio, game.time, game.camera.x);
+      this.drawMoon(ctx, w, h, sceneProgress, game.time);
+      this.drawAtmosphere(ctx, w, h, sceneProgress, altitudeRatio);
+      this.drawCloudLayer(ctx, w, h, sceneProgress, game.camera, game.time, 0);
+      this.drawTerrain(ctx, w, h, sceneProgress, game.time);
+      if (arrival < .04) this.drawLandmarks(ctx, w, h, progress, game.camera.x);
+      this.drawCloudLayer(ctx, w, h, sceneProgress, game.camera, game.time, 1);
+      if (arrival > .02) this.drawAirport(ctx, w, h, arrival, game.arrivalTimer, game.state, game.reducedMotion);
     }
 
     drawSky(ctx, w, h, progress, altitudeRatio) {
@@ -453,19 +459,81 @@
       ctx.ellipse(x, y - size * .18, size * .68, size * .42, 0, 0, Math.PI * 2);
       ctx.ellipse(x + size * .55, y, size * .58, size * .28, 0, 0, Math.PI * 2); ctx.fill();
     }
+
+    drawAirport(ctx, w, h, arrival, time, state, reducedMotion) {
+      const visibility = smoothstep(.08, .55, arrival);
+      const runwayReveal = smoothstep(.18, .78, arrival);
+      const horizon = lerp(h * .82, h * .53, runwayReveal);
+      const vanishingX = w * .66;
+      ctx.save();
+      ctx.globalAlpha = visibility;
+
+      ctx.fillStyle = "#0b1327";
+      ctx.fillRect(0, horizon - h * .055, w, h * .09);
+      ctx.fillStyle = "rgba(244,201,105,.65)";
+      for (let x = 18; x < w; x += 47) ctx.fillRect(x, horizon - 18 - (x % 3) * 5, 3, 3);
+
+      const terminalX = w * .1;
+      const terminalY = horizon - h * .11;
+      ctx.fillStyle = "#18243a";
+      ctx.fillRect(terminalX, terminalY, w * .34, h * .11);
+      ctx.fillStyle = "#253652";
+      ctx.fillRect(terminalX + w * .02, terminalY + h * .025, w * .3, h * .055);
+      ctx.fillStyle = "rgba(255,210,121,.72)";
+      for (let x = terminalX + 20; x < terminalX + w * .31; x += 28) ctx.fillRect(x, terminalY + 26, 12, 7);
+
+      ctx.fillStyle = "#121d31";
+      ctx.fillRect(w * .78, horizon - h * .095, w * .14, h * .095);
+      ctx.fillRect(w * .87, horizon - h * .22, 12, h * .13);
+      ctx.fillStyle = "#31415d";
+      ctx.beginPath(); ctx.moveTo(w * .85, horizon - h * .22); ctx.lineTo(w * .9, horizon - h * .22); ctx.lineTo(w * .89, horizon - h * .17); ctx.lineTo(w * .86, horizon - h * .17); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(151,215,244,.72)"; ctx.fillRect(w * .862, horizon - h * .208, w * .026, 5);
+
+      ctx.fillStyle = "#202735";
+      ctx.beginPath();
+      ctx.moveTo(vanishingX - w * .035, horizon);
+      ctx.lineTo(vanishingX + w * .035, horizon);
+      ctx.lineTo(w * 1.12, h);
+      ctx.lineTo(-w * .12, h);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(235,239,244,.55)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(vanishingX, horizon); ctx.lineTo(vanishingX - w * .02, h); ctx.stroke();
+
+      const pulse = reducedMotion ? .8 : .65 + Math.sin(time * 6) * .2;
+      for (let i = 1; i <= 12; i += 1) {
+        const t = i / 12;
+        const eased = t * t;
+        const y = lerp(horizon, h * 1.01, eased);
+        const half = lerp(w * .045, w * .61, eased);
+        const size = lerp(1.5, 5.5, eased);
+        ctx.fillStyle = `rgba(225,241,255,${.45 + pulse * .45})`;
+        ctx.beginPath(); ctx.arc(vanishingX - half, y, size, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(vanishingX + half, y, size, 0, Math.PI * 2); ctx.fill();
+        if (i % 2 === 0) {
+          ctx.fillStyle = "rgba(244,232,190,.7)";
+          ctx.fillRect(vanishingX - size * .4, y, size * .8, size * 3);
+        }
+      }
+
+      if (state === "TAXI" || state === "ARRIVED") {
+        ctx.strokeStyle = "rgba(245,205,89,.75)"; ctx.lineWidth = 3; ctx.setLineDash([14, 12]);
+        ctx.beginPath(); ctx.moveTo(w * .34, h * .76); ctx.quadraticCurveTo(w * .52, h * .66, w * .67, h * .6); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.restore();
+    }
   }
 
   class PlaneRenderer {
-    render(ctx, x, y, player, time, ending, reducedMotion, viewWidth) {
+    render(ctx, x, y, player, time, arriving, reducedMotion, viewWidth) {
       const hitFlash = player.hitReaction > 0 && Math.floor(player.hitReaction * 16) % 2 === 0;
       const scale = clamp(viewWidth / 520, .82, 1);
       const visualPitch = clamp(player.rotation, -.22, .2);
       ctx.save(); ctx.translate(x, y); ctx.rotate(visualPitch); ctx.scale(scale, scale);
-      if (!reducedMotion && ending) ctx.translate((Math.random() - .5) * 3, (Math.random() - .5) * 2);
       if (player.invulnerability > 0 && Math.floor(player.invulnerability * 12) % 2 === 0) ctx.globalAlpha = .48;
 
-      this.drawEngineTrail(ctx, -2, 25, time, ending, .45);
-      this.drawEngineTrail(ctx, 27, 32, time, ending, 1);
+      this.drawEngineTrail(ctx, -2, 25, time, arriving, .45);
+      this.drawEngineTrail(ctx, 27, 32, time, arriving, 1);
       ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 15; ctx.shadowOffsetY = 10;
 
       ctx.fillStyle = hitFlash ? "#fff" : "#aab9c7";
@@ -474,6 +542,7 @@
       ctx.beginPath(); ctx.moveTo(-61,5); ctx.lineTo(-82,21); ctx.lineTo(-52,18); ctx.lineTo(-28,6); ctx.closePath(); ctx.fill();
       ctx.fillStyle = hitFlash ? "#fff" : "#91a6b8";
       ctx.beginPath(); ctx.moveTo(-12,-6); ctx.lineTo(22,-43); ctx.lineTo(43,-42); ctx.lineTo(20,-3); ctx.closePath(); ctx.fill();
+      this.drawLandingGear(ctx, player.gearProgress);
 
       const body = ctx.createLinearGradient(0,-20,0,22);
       body.addColorStop(0, hitFlash ? "#fff" : "#f4f8fa");
@@ -491,18 +560,35 @@
       ctx.strokeStyle = "rgba(255,255,255,.36)"; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(-70,-7); ctx.quadraticCurveTo(2,-17,80,-8); ctx.stroke();
 
-      this.drawEngine(ctx, -1, 25, time, ending, true);
-      this.drawEngine(ctx, 28, 32, time, ending, false);
-      this.drawPassengerWindows(ctx, player, time, ending);
+      this.drawEngine(ctx, -1, 25, time, arriving, true);
+      this.drawEngine(ctx, 28, 32, time, arriving, false);
+      this.drawPassengerWindows(ctx, player, time, arriving);
       this.drawCockpit(ctx, player, time);
-      this.drawNavigationLights(ctx, time, ending);
+      this.drawDoor(ctx, player.doorProgress);
+      this.drawNavigationLights(ctx, time, false);
+      ctx.restore();
+    }
 
-      if (ending) {
-        for (let i=0;i<4;i+=1) {
-          const drift=(time*24+i*19)%68;
-          ctx.fillStyle=`rgba(112,125,143,${.3*(1-drift/68)})`;
-          ctx.beginPath(); ctx.arc(10-drift,30-Math.sin(time*2+i)*7,5+i*1.8,0,Math.PI*2); ctx.fill();
-        }
+    drawLandingGear(ctx, progress) {
+      if (progress <= .01) return;
+      const p = smoothstep(0, 1, progress);
+      ctx.save(); ctx.globalAlpha *= p; ctx.strokeStyle = "#657686"; ctx.fillStyle = "#202833"; ctx.lineWidth = 3;
+      [[-35, 11, -37, 29], [43, 9, 46, 27]].forEach(([x1, y1, x2, y2]) => {
+        const wheelY = lerp(y1, y2, p);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(lerp(x1, x2, p), wheelY); ctx.stroke();
+        ctx.beginPath(); ctx.arc(lerp(x1, x2, p), wheelY + 3, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#9aa9b5"; ctx.lineWidth = 1; ctx.stroke(); ctx.strokeStyle = "#657686"; ctx.lineWidth = 3;
+      });
+      ctx.restore();
+    }
+
+    drawDoor(ctx, progress) {
+      const x = 49, y = -5, width = 10, height = 20;
+      ctx.save(); ctx.strokeStyle = "rgba(80,105,124,.8)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(x, y, width, height, 2); ctx.stroke();
+      if (progress > .01) {
+        ctx.fillStyle = "#263746"; ctx.beginPath(); ctx.roundRect(x, y, width * progress, height, 2); ctx.fill();
+        ctx.fillStyle = "rgba(255,215,136,.75)"; ctx.fillRect(x + 1, y + 2, 2.2 * progress, height - 4);
       }
       ctx.restore();
     }
@@ -534,7 +620,7 @@
         ctx.save();ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,2.5);ctx.clip();
         ctx.fillStyle=turtleWindow?"#f6cc74":"#e8bd6d";ctx.fillRect(windowX-width/2,-9-height/2,width,height);
         ctx.fillStyle="rgba(255,244,203,.36)";ctx.fillRect(windowX-width/2,-9-height/2,width,2);
-        if (turtleWindow) this.drawPassengerTurtle(ctx,windowX,-9,player,time,ending);
+        if (turtleWindow && player.turtleExitProgress < .08) this.drawPassengerTurtle(ctx,windowX,-9,player,time,ending);
         ctx.restore();
         ctx.strokeStyle=turtleWindow?"rgba(255,235,169,.9)":"rgba(57,82,103,.75)";ctx.lineWidth=1;
         ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,2.5);ctx.stroke();
@@ -646,8 +732,14 @@
       this.progress = 0;
       this.time = 0;
       this.lastTimestamp = 0;
-      this.failureTimer = 0;
+      this.phaseTimer = 0;
+      this.arrivalTimer = 0;
+      this.arrivalSceneProgress = 0;
       this.arrivalFuel = 100;
+      this.approachStartAltitude = 500;
+      this.touchdownDone = false;
+      this.finalShown = false;
+      this.pausedFromState = "PLAYING";
       this.nextLandmark = 0;
       this.raf = 0;
       this.running = false;
@@ -666,8 +758,8 @@
       this.root.querySelector("#restart-button").addEventListener("click", () => this.reset(true));
       this.root.querySelector("#reduce-motion").addEventListener("change", event => { this.reducedMotion = event.target.checked; });
       this.input.onPause = () => this.togglePause();
-      this.input.onRestart = () => { if (this.state === "GAME_OVER") this.reset(true); };
-      this.boundVisibility = () => { if (document.hidden && this.state === "PLAYING") this.togglePause(); };
+      this.input.onRestart = () => { if (this.state === "ARRIVED" && this.finalShown) this.reset(true); };
+      this.boundVisibility = () => { if (document.hidden && this.isActiveFlightState()) this.togglePause(); };
       document.addEventListener("visibilitychange", this.boundVisibility);
     }
 
@@ -695,38 +787,47 @@
 
     start() {
       if (this.state === "MENU") this.reset(false);
-      if (new URLSearchParams(location.search).get("preview") === "ending") {
-        this.player.position.x = CONFIG.finalDistance * CONFIG.endingAt;
-        this.player.position.y = 6500;
-        this.camera.x = this.player.position.x;
-        this.camera.altitude = this.player.position.y;
-        this.progress = CONFIG.endingAt;
-        this.obstacles.nextSpawnX = this.player.position.x + 1800;
-      }
       this.state = "PLAYING";
       this.ui.enterGame();
       this.ui.announceRegion("La ciudad despierta");
+      if (new URLSearchParams(location.search).get("preview") === "ending") {
+        this.player.position.x = CONFIG.finalDistance * CONFIG.approachAt;
+        this.player.position.y = 6500;
+        this.camera.x = this.player.position.x;
+        this.camera.altitude = this.player.position.y;
+        this.progress = CONFIG.approachAt;
+        this.obstacles.nextSpawnX = this.player.position.x + 1800;
+        this.beginApproach();
+      }
     }
 
     stop() {
-      if (this.state === "PLAYING" || this.state === "ENDING") this.togglePause();
+      if (this.isActiveFlightState()) this.togglePause();
     }
 
     reset(playImmediately = false) {
       this.player.reset(); this.camera.reset(); this.obstacles.reset(); this.particles.clear(); this.ui.reset();
-      this.progress = 0; this.failureTimer = 0; this.arrivalFuel = 100; this.nextLandmark = 1; this.input.clear();
+      this.progress = 0; this.phaseTimer = 0; this.arrivalTimer = 0; this.arrivalSceneProgress = 0;
+      this.arrivalFuel = 100; this.approachStartAltitude = 500; this.touchdownDone = false; this.finalShown = false; this.nextLandmark = 1; this.input.clear();
       this.state = playImmediately ? "PLAYING" : "MENU";
       if (playImmediately) { this.ui.enterGame(); this.ui.announceRegion("La ciudad despierta"); }
     }
 
+    isActiveFlightState() {
+      return ["PLAYING", "APPROACH", "LANDING", "TAXI", "ARRIVED"].includes(this.state) && !this.finalShown;
+    }
+
     togglePause() {
-      if (this.state === "PLAYING") { this.state = "PAUSED"; this.input.clear(); this.ui.showPause(true); }
-      else if (this.state === "PAUSED") { this.state = "PLAYING"; this.ui.showPause(false); this.lastTimestamp = performance.now(); }
+      if (this.isActiveFlightState()) {
+        this.pausedFromState = this.state; this.state = "PAUSED"; this.input.clear(); this.ui.showPause(true);
+      } else if (this.state === "PAUSED") {
+        this.state = this.pausedFromState; this.ui.showPause(false); this.lastTimestamp = performance.now();
+      }
     }
 
     update(dt) {
       this.time += dt;
-      if (this.state === "MENU" || this.state === "PAUSED" || this.state === "GAME_OVER") return;
+      if (this.state === "MENU" || this.state === "PAUSED" || (this.state === "ARRIVED" && this.finalShown)) return;
       if (this.state === "PLAYING") {
         this.progress = clamp(this.camera.x / CONFIG.finalDistance, 0, 1);
         this.player.update(dt, this.input.keys, this.progress, this.view.width, true);
@@ -734,9 +835,15 @@
         this.constrainPlayerToView();
         this.obstacles.update(dt, this.player, this.progress, () => this.handleCollision());
         this.updateLandmarks();
-        if (this.progress >= CONFIG.endingAt) this.beginEnding();
-      } else if (this.state === "ENDING") {
-        this.updateEnding(dt);
+        if (this.progress >= CONFIG.approachAt) this.beginApproach();
+      } else if (this.state === "APPROACH") {
+        this.updateApproach(dt);
+      } else if (this.state === "LANDING") {
+        this.updateLanding(dt);
+      } else if (this.state === "TAXI") {
+        this.updateTaxi(dt);
+      } else if (this.state === "ARRIVED") {
+        this.updateArrived(dt);
       }
       this.particles.update(dt);
       this.ui.update(this.player, dt);
@@ -754,31 +861,100 @@
       this.ui.announceMessage("¡Uy! El cielo también tiene baches.", 2.2);
     }
 
-    beginEnding() {
-      this.state = "ENDING"; this.failureTimer = 0; this.arrivalFuel = this.player.fuel; this.input.clear();
-      this.ui.announceMessage("Llegando al destino…", 3.8);
+    beginApproach() {
+      this.state = "APPROACH"; this.phaseTimer = 0; this.arrivalTimer = 0; this.arrivalFuel = this.player.fuel;
+      this.approachStartAltitude = this.player.position.y;
+      this.obstacles.items.length = 0;
+      this.ui.announceMessage("Llegando al destino…", 3.2);
     }
 
-    updateEnding(dt) {
-      this.failureTimer += dt;
+    updateApproach(dt) {
+      this.phaseTimer += dt; this.arrivalTimer += dt;
+      const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.approach, 0, 1);
+      this.player.update(dt, this.input.keys, this.progress, this.view.width, true);
       this.player.fuel = this.arrivalFuel;
-      this.player.velocity.x = lerp(this.player.velocity.x, this.failureTimer < 4 ? 150 : 70, 1 - Math.pow(.968, dt * 60));
-      this.player.velocity.y = lerp(this.player.velocity.y, -8, 1 - Math.pow(.985, dt * 60));
+      const descentTarget = lerp(this.approachStartAltitude, 1800, smoothstep(.12, 1, phase));
+      this.player.position.y = lerp(this.player.position.y, descentTarget, 1 - Math.pow(.94, dt * 60));
+      this.player.gearProgress = smoothstep(.18, .88, phase);
+      this.camera.update(dt, this.player, this.progress, true);
+      this.arrivalSceneProgress = smoothstep(0, 1, phase) * .48;
+      this.progress = lerp(CONFIG.approachAt, .91, phase);
+      if (this.phaseTimer >= CONFIG.arrivalDurations.approach) {
+        this.state = "LANDING"; this.phaseTimer = 0; this.input.clear();
+        this.ui.announceMessage("Preparando aterrizaje…", 2.8);
+      }
+    }
+
+    updateLanding(dt) {
+      this.phaseTimer += dt; this.arrivalTimer += dt;
+      const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.landing, 0, 1);
+      this.player.gearProgress = 1;
+      this.player.position.y = lerp(1800, CONFIG.minAltitude, smoothstep(.08, .82, phase));
+      this.player.velocity.x = lerp(this.player.velocity.x, 92, 1 - Math.pow(.965, dt * 60));
       this.player.position.x += this.player.velocity.x * dt;
-      this.player.position.y = Math.max(CONFIG.minAltitude, this.player.position.y + this.player.velocity.y * dt);
-      this.player.rotation = lerp(this.player.rotation, .08, 1 - Math.pow(.98, dt * 60));
-      this.progress = clamp(this.player.position.x / CONFIG.finalDistance, 0, .985);
-      this.camera.update(dt, this.player, this.progress, false);
-      if (this.failureTimer >= CONFIG.endingDuration) {
-        this.player.velocity.x = 0; this.state = "GAME_OVER"; this.ui.showEnding();
+      const targetPitch = phase < .68 ? -.11 : lerp(-.11, 0, smoothstep(.68, 1, phase));
+      this.player.rotation = lerp(this.player.rotation, targetPitch, 1 - Math.pow(.94, dt * 60));
+      this.camera.x += this.player.velocity.x * dt;
+      this.arrivalSceneProgress = lerp(.48, .9, smoothstep(0, 1, phase));
+      this.progress = lerp(.91, .97, phase);
+      if (!this.touchdownDone && phase >= .68) {
+        this.touchdownDone = true;
+        const point = this.getPlayerScreenPosition();
+        this.particles.emit(point.x - 30, point.y + 26, { count: this.reducedMotion ? 4 : 13, color: "205,214,220", speed: 48, life: .9, size: 5 });
+        this.ui.announceMessage("Aterrizaje suave.", 2.2);
+      }
+      if (this.phaseTimer >= CONFIG.arrivalDurations.landing) {
+        this.state = "TAXI"; this.phaseTimer = 0; this.player.rotation = 0;
+      }
+    }
+
+    updateTaxi(dt) {
+      this.phaseTimer += dt; this.arrivalTimer += dt;
+      const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.taxi, 0, 1);
+      this.player.velocity.x = lerp(78, 0, smoothstep(.08, 1, phase));
+      this.player.position.y = CONFIG.minAltitude;
+      this.player.position.x += this.player.velocity.x * dt;
+      this.camera.x += this.player.velocity.x * dt * .55;
+      this.player.rotation = lerp(this.player.rotation, 0, 1 - Math.pow(.9, dt * 60));
+      this.arrivalSceneProgress = lerp(.9, 1, phase);
+      this.progress = lerp(.97, 1, phase);
+      if (this.phaseTimer >= CONFIG.arrivalDurations.taxi) {
+        this.state = "ARRIVED"; this.phaseTimer = 0; this.player.velocity.x = 0;
+        this.ui.announceRegion("Aeropuerto · Destino final");
+      }
+    }
+
+    updateArrived(dt) {
+      this.phaseTimer += dt; this.arrivalTimer += dt;
+      this.player.velocity.x = 0; this.player.velocity.y = 0; this.player.rotation = 0;
+      this.player.position.y = CONFIG.minAltitude;
+      this.player.doorProgress = smoothstep(.08, .32, this.phaseTimer / CONFIG.arrivalDurations.disembark);
+      this.player.turtleExitProgress = smoothstep(.22, .92, this.phaseTimer / CONFIG.arrivalDurations.disembark);
+      this.arrivalSceneProgress = 1; this.progress = 1;
+      if (!this.finalShown && this.phaseTimer >= CONFIG.arrivalDurations.disembark) {
+        this.finalShown = true; this.ui.showEnding();
       }
     }
 
     getPlayerScreenPosition() {
-      return {
+      const normal = {
         x: this.view.width * .4 + (this.player.position.x - this.camera.x),
         y: this.view.height * .53 - (this.player.position.y - this.camera.altitude) * .38
       };
+      if (this.state === "APPROACH") {
+        const phase = smoothstep(0, 1, this.phaseTimer / CONFIG.arrivalDurations.approach);
+        return { x: lerp(normal.x, this.view.width * .45, phase), y: lerp(normal.y, this.view.height * .38, phase * .72) };
+      }
+      if (this.state === "LANDING") {
+        const phase = smoothstep(0, 1, this.phaseTimer / CONFIG.arrivalDurations.landing);
+        return { x: lerp(this.view.width * .45, this.view.width * .48, phase), y: lerp(this.view.height * .38, this.view.height * .68, phase) };
+      }
+      if (this.state === "TAXI") {
+        const phase = smoothstep(0, 1, this.phaseTimer / CONFIG.arrivalDurations.taxi);
+        return { x: lerp(this.view.width * .48, this.view.width * .63, phase), y: this.view.height * .68 };
+      }
+      if (this.state === "ARRIVED") return { x: this.view.width * .63, y: this.view.height * .68 };
+      return normal;
     }
 
     constrainPlayerToView() {
@@ -817,10 +993,12 @@
       const shake = this.camera.offset(this.reducedMotion);
       ctx.save(); ctx.translate(shake.x, shake.y);
       this.world.render(ctx, this.view, this);
-      if (this.state !== "MENU") this.renderObstacles(ctx);
+      if (this.state === "PLAYING") this.renderObstacles(ctx);
       const point = this.state === "MENU" ? { x: w * .24, y: h * .67 + Math.sin(this.time * 1.4) * 5 } : this.getPlayerScreenPosition();
       this.renderSpeedLines(ctx, point);
-      this.planeRenderer.render(ctx, point.x, point.y, this.player, this.time, this.state === "ENDING" || this.state === "GAME_OVER", this.reducedMotion, this.view.width);
+      const arriving = ["APPROACH", "LANDING", "TAXI", "ARRIVED"].includes(this.state);
+      this.planeRenderer.render(ctx, point.x, point.y, this.player, this.time, arriving, this.reducedMotion, this.view.width);
+      if (this.state === "ARRIVED") this.renderDisembarkation(ctx, point);
       this.particles.render(ctx);
       this.renderVignette(ctx, w, h);
       ctx.restore();
@@ -828,7 +1006,7 @@
     }
 
     renderSpeedLines(ctx, point) {
-      if (this.reducedMotion || this.state === "MENU" || this.player.velocity.x < 145) return;
+      if (this.reducedMotion || this.state !== "PLAYING" || this.player.velocity.x < 145) return;
       const intensity = clamp((this.player.velocity.x - 130) / 95, 0, 1);
       ctx.strokeStyle = `rgba(190,218,255,${intensity * .12})`; ctx.lineWidth = 1;
       for (let i=0;i<8;i+=1) {
@@ -866,6 +1044,38 @@
       } else {
         ctx.rotate(.22); ctx.fillStyle="#b8c7d6";ctx.fillRect(-23,-10,46,20);ctx.fillStyle="#5377a7";ctx.fillRect(-61,-18,34,36);ctx.fillRect(27,-18,34,36);ctx.fillStyle="#f3cc78";ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
       }
+      ctx.restore();
+    }
+
+    renderDisembarkation(ctx, planePoint) {
+      const door = { x: planePoint.x + 50, y: planePoint.y - 5 };
+      const scale = clamp(this.view.width / 520, .82, 1);
+      const groundY = planePoint.y + 72 * scale;
+      const exit = this.player.turtleExitProgress;
+      if (this.player.doorProgress > .08) {
+        ctx.save(); ctx.strokeStyle = "rgba(214,224,231,.8)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(door.x, door.y + 12); ctx.lineTo(door.x + 70 * scale, groundY); ctx.stroke();
+        ctx.lineWidth = 1.5;
+        for (let i = 1; i < 6; i += 1) {
+          const t = i / 6, x = lerp(door.x, door.x + 70 * scale, t), y = lerp(door.y + 12, groundY, t);
+          ctx.beginPath(); ctx.moveTo(x - 9, y + 3); ctx.lineTo(x + 10, y + 3); ctx.stroke();
+        }
+        ctx.restore();
+      }
+      if (exit <= .01) return;
+      const descend = smoothstep(0, .68, exit);
+      const walk = smoothstep(.68, 1, exit);
+      const x = lerp(door.x + 2, door.x + 70 * scale, descend) + walk * 55 * scale;
+      const y = lerp(door.y + 5, groundY - 5, descend);
+      const step = this.reducedMotion ? 0 : Math.sin(this.time * 10) * (1 - walk * .45);
+      ctx.save(); ctx.translate(x, y + step); ctx.scale(scale * 1.18, scale * 1.18);
+      ctx.fillStyle = "#527b58"; ctx.beginPath(); ctx.ellipse(0, 0, 11, 8, -.12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#304d39"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 7, .2, 5.9); ctx.stroke();
+      ctx.fillStyle = "#8fbb78"; ctx.beginPath(); ctx.arc(11, -4, 5.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#24352e"; ctx.beginPath(); ctx.arc(13, -5, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#759b68"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-9 + step * .25, 11); ctx.moveTo(5, 6); ctx.lineTo(8 - step * .25, 11); ctx.stroke();
+      if (walk > .7) { ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(13, -7 - Math.sin(this.time * 4) * 2); ctx.stroke(); }
       ctx.restore();
     }
 
