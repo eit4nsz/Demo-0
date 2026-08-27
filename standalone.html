@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071126">
   <meta name="description" content="Hasta la Luna: un pequeño viaje nocturno con una tortuga demasiado optimista.">
@@ -483,7 +484,7 @@ kbd {
   class Player {
     constructor() { this.reset(); }
     reset() {
-      this.position = { x: 0, y: 190 };
+      this.position = { x: 0, y: 500 };
       this.velocity = { x: CONFIG.cruiseSpeed, y: 0 };
       this.rotation = -.03;
       this.targetRotation = -.03;
@@ -493,17 +494,19 @@ kbd {
       this.blinkTimer = 2.2;
       this.blink = 0;
     }
-    update(dt, input, progress, controlsEnabled = true) {
+    update(dt, input, progress, viewWidth, controlsEnabled = true) {
       const verticalInput = controlsEnabled ? Number(input.up) - Number(input.down) : 0;
       const horizontalInput = controlsEnabled ? Number(input.right) - Number(input.left) : 0;
       const routeFloor = 145 + Math.pow(progress, 1.62) * 6500;
       const gentleLift = this.position.y < routeFloor ? clamp((routeFloor - this.position.y) * .024, 0, 54) : 0;
-      this.velocity.y += (verticalInput * 138 + gentleLift) * dt;
-      this.velocity.y *= Math.pow(.966, dt * 60);
-      this.velocity.y = clamp(this.velocity.y, -105, 135);
-      const desiredSpeed = CONFIG.cruiseSpeed + progress * 30 + horizontalInput * 52;
-      this.velocity.x = lerp(this.velocity.x, desiredSpeed, 1 - Math.pow(.94, dt * 60));
-      this.velocity.x = clamp(this.velocity.x, 78, 225);
+      this.velocity.y += (verticalInput * 560 + gentleLift) * dt;
+      this.velocity.y *= Math.pow(.975, dt * 60);
+      this.velocity.y = clamp(this.velocity.y, -220, 240);
+      const cruiseSpeed = CONFIG.cruiseSpeed + progress * 30;
+      const steeringSpeed = clamp(viewWidth * .32, 140, 420);
+      const desiredSpeed = cruiseSpeed + horizontalInput * steeringSpeed;
+      this.velocity.x = lerp(this.velocity.x, desiredSpeed, 1 - Math.pow(.9, dt * 60));
+      this.velocity.x = clamp(this.velocity.x, cruiseSpeed - steeringSpeed, cruiseSpeed + steeringSpeed);
       this.position.x += this.velocity.x * dt;
       this.position.y += this.velocity.y * dt;
       if (this.position.y < CONFIG.minAltitude) { this.position.y = CONFIG.minAltitude; this.velocity.y = Math.max(12, this.velocity.y); }
@@ -531,10 +534,16 @@ kbd {
 
   class Camera {
     constructor() { this.reset(); }
-    reset() { this.x = 0; this.altitude = 190; this.shake = 0; }
-    update(dt, player) {
-      this.x = lerp(this.x, player.position.x, 1 - Math.pow(.965, dt * 60));
-      this.altitude = lerp(this.altitude, player.position.y + player.velocity.y * .85, 1 - Math.pow(.955, dt * 60));
+    reset() { this.x = 0; this.speed = CONFIG.cruiseSpeed; this.altitude = 500; this.shake = 0; }
+    update(dt, player, progress, trackCruise = true) {
+      if (trackCruise) {
+        const targetSpeed = CONFIG.cruiseSpeed + progress * 30;
+        this.speed = lerp(this.speed, targetSpeed, 1 - Math.pow(.94, dt * 60));
+      } else {
+        this.speed = player.velocity.x;
+      }
+      this.x += this.speed * dt;
+      this.altitude = lerp(this.altitude, player.position.y, 1 - Math.pow(.995, dt * 60));
       this.shake = Math.max(0, this.shake - dt * 1.8);
     }
     hit(amount = .7) { this.shake = Math.max(this.shake, amount); }
@@ -940,9 +949,10 @@ kbd {
       this.time += dt;
       if (this.state === "MENU" || this.state === "PAUSED" || this.state === "GAME_OVER") return;
       if (this.state === "PLAYING") {
-        this.progress = clamp(this.player.position.x / CONFIG.finalDistance, 0, 1);
-        this.player.update(dt, this.input.keys, this.progress, true);
-        this.camera.update(dt, this.player);
+        this.progress = clamp(this.camera.x / CONFIG.finalDistance, 0, 1);
+        this.player.update(dt, this.input.keys, this.progress, this.view.width, true);
+        this.camera.update(dt, this.player, this.progress, true);
+        this.constrainPlayerToView();
         this.obstacles.update(dt, this.player, this.progress, () => this.handleCollision());
         this.updateLandmarks();
         if (this.progress >= CONFIG.endingAt) this.beginEnding();
@@ -980,7 +990,7 @@ kbd {
       this.player.position.y = Math.max(CONFIG.minAltitude, this.player.position.y + this.player.velocity.y * dt);
       this.player.rotation = lerp(this.player.rotation, .08, 1 - Math.pow(.98, dt * 60));
       this.progress = clamp(this.player.position.x / CONFIG.finalDistance, 0, .985);
-      this.camera.update(dt, this.player);
+      this.camera.update(dt, this.player, this.progress, false);
       if (this.failureTimer > 3.3 && this.failureTimer - dt <= 3.3) this.ui.announceMessage("Puf… puf… ¿eso era la reserva?", 3.4);
       if (this.failureTimer > 6) {
         const point = this.getPlayerScreenPosition();
@@ -994,9 +1004,33 @@ kbd {
 
     getPlayerScreenPosition() {
       return {
-        x: this.view.width * .4,
-        y: this.view.height * .53 - (this.player.position.y - this.camera.altitude) * .28
+        x: this.view.width * .4 + (this.player.position.x - this.camera.x),
+        y: this.view.height * .53 - (this.player.position.y - this.camera.altitude) * .38
       };
+    }
+
+    constrainPlayerToView() {
+      const horizontalAnchor = this.view.width * .4;
+      const minX = this.camera.x + this.view.width * .15 - horizontalAnchor;
+      const maxX = this.camera.x + this.view.width * .7 - horizontalAnchor;
+      if (this.player.position.x < minX) {
+        this.player.position.x = minX;
+        this.player.velocity.x = Math.max(this.camera.speed, this.player.velocity.x);
+      } else if (this.player.position.x > maxX) {
+        this.player.position.x = maxX;
+        this.player.velocity.x = Math.min(this.camera.speed, this.player.velocity.x);
+      }
+
+      const verticalAnchor = this.view.height * .53;
+      const minY = Math.max(CONFIG.minAltitude, this.camera.altitude + (verticalAnchor - this.view.height * .82) / .38);
+      const maxY = Math.min(CONFIG.maxAltitude, this.camera.altitude + (verticalAnchor - this.view.height * .15) / .38);
+      if (this.player.position.y < minY) {
+        this.player.position.y = minY;
+        this.player.velocity.y = Math.max(0, this.player.velocity.y);
+      } else if (this.player.position.y > maxY) {
+        this.player.position.y = maxY;
+        this.player.velocity.y = Math.min(0, this.player.velocity.y);
+      }
     }
 
     render() {
@@ -1036,7 +1070,7 @@ kbd {
       const playerPoint = this.getPlayerScreenPosition();
       for (const item of this.obstacles.items) {
         const x = playerPoint.x + (item.x - this.player.position.x);
-        const y = this.view.height * .53 - (item.y - this.camera.altitude) * .28;
+        const y = this.view.height * .53 - (item.y - this.camera.altitude) * .38;
         if (x < -140 || x > this.view.width + 140 || y < -140 || y > this.view.height + 140) continue;
         this.drawObstacle(ctx, item, x, y);
       }
