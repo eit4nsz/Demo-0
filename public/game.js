@@ -2,8 +2,8 @@
   "use strict";
 
   const GAME_TEXT = Object.freeze({
-    title: "Hasta la Luna",
-    intro: "Un pequeño viaje con una tortuga demasiado optimista.",
+    title: "Escuela de Aviación",
+    intro: "Un vuelo nocturno alrededor del mundo.",
     endingLine1: "Vuelo completado.",
     endingLine2: "La tortuga llegó a su destino."
   });
