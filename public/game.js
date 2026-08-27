@@ -16,7 +16,10 @@
     cruiseSpeed: 174,
     routeSpeedBoost: 36,
     endingDuration: 10,
-    obstacleGap: [680, 1150],
+    obstacleGap: [540, 1250],
+    obstacleSpeed: [18, 132],
+    obstacleAmplitude: [12, 88],
+    approachClearAt: 0.9,
     collisionFuelLoss: 11,
     invulnerabilitySeconds: 1.8
   });
@@ -29,6 +32,15 @@
   };
   const mixColor = (a, b, t) => a.map((value, index) => Math.round(lerp(value, b[index], t)));
   const rgba = (color, alpha = 1) => `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+  const getDifficulty = progress => {
+    const level = smoothstep(.04, .88, clamp(progress, 0, 1));
+    return {
+      level,
+      obstacleSpeed: lerp(CONFIG.obstacleSpeed[0], CONFIG.obstacleSpeed[1], level),
+      spawnGap: lerp(CONFIG.obstacleGap[1], CONFIG.obstacleGap[0], level),
+      movementAmplitude: lerp(CONFIG.obstacleAmplitude[0], CONFIG.obstacleAmplitude[1], level)
+    };
+  };
 
   class SeededRandom {
     constructor(seed = 123456) { this.seed = seed >>> 0; }
@@ -222,21 +234,48 @@
     reset() { this.items = []; this.nextSpawnX = 900; this.random = new SeededRandom(9031); }
     chooseType(progress) {
       const roll = this.random.next();
-      if (progress < .25) return roll < .5 ? "bird" : roll < .78 ? "balloon" : "flock";
-      if (progress < .58) return roll < .38 ? "flock" : roll < .68 ? "storm" : "weather";
-      if (progress < .8) return roll < .55 ? "weather" : "storm";
-      return roll < .55 ? "meteor" : "satellite";
+      if (progress < .2) return roll < .56 ? "bird" : roll < .82 ? "balloon" : "flock";
+      if (progress < .45) return roll < .34 ? "bird" : roll < .63 ? "flock" : roll < .84 ? "balloon" : "weather";
+      if (progress < .7) return roll < .38 ? "flock" : roll < .7 ? "weather" : "storm";
+      return roll < .38 ? "meteor" : roll < .63 ? "satellite" : roll < .82 ? "storm" : "weather";
     }
     update(dt, player, progress, onHit) {
-      while (this.nextSpawnX < player.position.x + 1550 && progress < CONFIG.endingAt - .02) {
+      if (progress >= CONFIG.approachClearAt) {
+        this.items.length = 0;
+        return;
+      }
+      const difficulty = getDifficulty(progress);
+      while (this.nextSpawnX < player.position.x + 1550 && progress < CONFIG.approachClearAt - .02) {
         const type = this.chooseType(progress);
         const altitudeSpread = progress < .2 ? 430 : progress < .65 ? 700 : 900;
         const y = clamp(player.position.y + this.random.range(-altitudeSpread, altitudeSpread), CONFIG.minAltitude + 60, CONFIG.maxAltitude - 100);
-        this.items.push({ x: this.nextSpawnX, y, type, phase: this.random.range(0, Math.PI * 2), passed: false });
-        const difficulty = lerp(CONFIG.obstacleGap[1], CONFIG.obstacleGap[0], progress);
-        this.nextSpawnX += difficulty * this.random.range(.8, 1.25);
+        const speedFactor = { bird: 1, flock: .82, balloon: .12, storm: .18, weather: .24, meteor: 1.35, satellite: .72 }[type];
+        const amplitudeFactor = { bird: .52, flock: .7, balloon: .65, storm: .2, weather: .55, meteor: .25, satellite: .42 }[type];
+        const verticalDirection = type === "bird" || type === "flock" || type === "meteor"
+          ? (this.random.next() < .5 ? -1 : 1)
+          : 0;
+        this.items.push({
+          x: this.nextSpawnX,
+          y,
+          baseY: y,
+          type,
+          phase: this.random.range(0, Math.PI * 2),
+          vx: -difficulty.obstacleSpeed * speedFactor * this.random.range(.82, 1.18),
+          vy: verticalDirection * difficulty.obstacleSpeed * this.random.range(.08, .22),
+          amplitude: difficulty.movementAmplitude * amplitudeFactor,
+          frequency: type === "bird" || type === "flock" ? this.random.range(2.2, 3.2) : this.random.range(.55, 1.05),
+          passed: false
+        });
+        this.nextSpawnX += difficulty.spawnGap * this.random.range(.88, 1.18);
       }
-      this.items.forEach(item => { item.phase += dt * (item.type === "bird" || item.type === "flock" ? 5 : 1.2); });
+      this.items.forEach(item => {
+        item.x += item.vx * dt;
+        item.baseY += item.vy * dt;
+        if (item.baseY < CONFIG.minAltitude + 80 || item.baseY > CONFIG.maxAltitude - 120) item.vy *= -1;
+        item.baseY = clamp(item.baseY, CONFIG.minAltitude + 80, CONFIG.maxAltitude - 120);
+        item.phase += dt * item.frequency;
+        item.y = clamp(item.baseY + Math.sin(item.phase) * item.amplitude, CONFIG.minAltitude + 60, CONFIG.maxAltitude - 100);
+      });
       this.items = this.items.filter(item => item.x > player.position.x - 900);
       for (const item of this.items) {
         const dx = item.x - player.position.x;
