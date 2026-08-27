@@ -26,11 +26,12 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 | Obstáculos y colisiones | Preservados y probados |
 | Combustible e invulnerabilidad | Preservados y probados |
 | Pausa, reanudación y reinicio | Implementados y probados |
-| Escenarios, landmarks y final | Implementados |
+| Escenarios, landmarks, aeropuerto y llegada | Implementados |
 | Avión comercial, piloto y tortuga pasajera | Implementados en Iteración 2 |
-| Duración total | 180,62 s; validada en Iteración 2 |
+| Dificultad progresiva | Implementada en Iteración 3 |
+| Duración total | 84,864 s; validada en Iteración 3 |
 | Responsive | Validado en tres resoluciones objetivo |
-| Consola | 0 errores después de Iteración 2 |
+| Consola | 0 errores después de Iteración 3 |
 | Build y versión autocontenida | Implementados y validados |
 
 ## 3. Tecnologías y lenguajes
@@ -105,18 +106,19 @@ D:\HTML\Escuela de aviación\
 ### Configuración
 
 - `GAME_TEXT`: textos principales y narrativos.
-- `CONFIG`: distancia final, altitudes, velocidad, obstáculos, combustible e invulnerabilidad.
+- `CONFIG`: distancia final, inicio y duraciones de llegada, altitudes, velocidad, obstáculos, combustible e invulnerabilidad.
+- `getDifficulty(progress)`: curva centralizada de velocidad, separación y amplitud de obstáculos.
 - `SeededRandom`: secuencias deterministas para mundo y obstáculos.
 
 ### Sistemas
 
 - **`InputManager`:** unifica WASD, flechas y táctil; no contiene física ni render.
-- **`Player`:** posición, velocidad, aceleración, drag, rotación, combustible, colisiones e invulnerabilidad.
+- **`Player`:** posición, velocidad, aceleración, drag, rotación, combustible, colisiones, invulnerabilidad y estado visual de tren/puerta/tortuga.
 - **`Camera`:** avance del mundo, seguimiento vertical lento y shake.
-- **`ObstacleManager`:** generación, actualización, limpieza y colisión mundial.
+- **`ObstacleManager`:** generación por etapas, velocidad propia, trayectorias, limpieza y colisión mundial.
 - **`ParticleSystem`:** partículas livianas de impacto y motor.
-- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno, atmósfera y landmarks.
-- **`PlaneRenderer`:** dibuja un avión comercial original con dos motores, ventanas, luces, piloto y tortuga pasajera; representa el estado del jugador sin controlar la física.
+- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno, atmósfera, landmarks y aeropuerto nocturno.
+- **`PlaneRenderer`:** dibuja un avión comercial original con motores, ventanas, luces, piloto, tortuga pasajera, tren y puerta; representa el estado sin controlar la física.
 - **`UIManager`:** HUD, mensajes, regiones y overlays.
 - **`Game`:** ciclo de vida, estados, límites, progresión, render y coordinación.
 
@@ -125,14 +127,18 @@ D:\HTML\Escuela de aviación\
 ```text
 MENU → PLAYING ⇄ PAUSED
           ↓
-        ENDING
+       APPROACH
           ↓
-       GAME_OVER
+        LANDING
           ↓
-       PLAYING (reinicio)
+          TAXI
+          ↓
+        ARRIVED
+          ↓
+ PLAYING (Volver a volar)
 ```
 
-La física no avanza en `MENU`, `PAUSED` ni `GAME_OVER`.
+`PAUSED` conserva la fase desde la que se pausó y la restaura sin saltos. Cuando `ARRIVED` termina el desembarque, la física queda detenida y aparece el final exitoso.
 
 ## 9. Modelo de movimiento
 
@@ -180,13 +186,14 @@ render y colisiones alineadas
 
 ## 11. Sistemas preservados
 
-- Siete tipos de obstáculos según la etapa.
+- Siete tipos de obstáculos con dificultad escalada por `progress`.
 - Penalización de 11 puntos de combustible por impacto.
 - Invulnerabilidad temporal de 1.8 segundos.
 - Shake, partículas y mensaje de colisión.
 - Consumo continuo de combustible.
 - Progresión y landmarks.
-- Secuencia final por falta de combustible.
+- Aproximación, aterrizaje, taxi, estacionamiento y desembarque.
+- Combustible restante al completar una partida normal; no se fuerza a cero.
 - Preferencia de reducir movimiento.
 
 ## 12. API pública
@@ -311,7 +318,7 @@ El avión de hélice fue reemplazado por una aeronave comercial original dibujad
 - tomas de aire, brillo de motor y estelas tenues;
 - ocho ventanas con iluminación cálida;
 - luces roja, verde y blanca intermitente;
-- humo procedente de la zona de motores durante el final;
+- estelas tenues procedentes de los motores durante el vuelo;
 - escala responsive de 82 % en pantallas estrechas y 100 % en escritorio;
 - pitch visual limitado a `-0.22…0.20` radianes para una inclinación comercial creíble.
 
@@ -327,7 +334,7 @@ No queda ninguna hélice, marca, aerolínea ni modelo real copiado.
 
 La hitbox no se amplió hasta cubrir toda la silueta. Permanece centrada en el fuselaje principal con radio 26, evitando penalizaciones por cola, punta de ala o nariz. Una prueba a 70 unidades no colisiona; una superposición central sí reduce combustible de 100 % a 89 % y activa 1.8 s de invulnerabilidad.
 
-### Ritmo antes y después
+### Ritmo antes y después (registro histórico de Iteración 2)
 
 Medición previa usando el bucle real y la fórmula de velocidad progresiva:
 
@@ -340,7 +347,7 @@ Medición previa usando el bucle real y la fórmula de velocidad progresiva:
 | Inicio → pantalla final | 186.30 s | 180.62 s |
 | Combustible sin impactos al comenzar el final | 90.9 % | 69.6 % |
 
-El recorrido anterior ya duraba aproximadamente 3:06, no 8–10 minutos. Por eso el ajuste se mantuvo conservador para no salir del rango solicitado. La nueva partida dura aproximadamente 3:01, aumenta ligeramente el ritmo y conserva el tiempo de reacción.
+En Iteración 2 el recorrido duraba aproximadamente 3:01. Estos valores fueron sustituidos por la recalibración de Iteración 3 y ya no describen la versión vigente.
 
 Los landmarks siguen basados en porcentajes. No fue necesario modificar sus posiciones: París, Egipto, Nueva York, Río, Japón y la costa conservan orden y separación, mientras atmósfera, espacio y Luna continúan usando la progresión global hasta el 92 %.
 
@@ -358,7 +365,7 @@ Los landmarks siguen basados en porcentajes. No fue necesario modificar sus posi
 - [x] Colisión central, penalización e invulnerabilidad.
 - [x] Pausa, reanudación y reinicio.
 - [x] Partida completa simulada con el `Game.update` real a 60 FPS.
-- [x] Pantalla final a 180.62 s y combustible final en 0 %.
+- [x] Registro histórico de duración a 180.62 s; comportamiento sustituido en Iteración 3.
 - [x] Ciudad, París, Egipto, Nueva York, Río, Japón y costa.
 - [x] Progresión posterior por atmósfera, espacio y Luna hasta el final.
 - [x] Responsive en `390×844`, `1366×768` y `1920×1080`.
@@ -366,14 +373,87 @@ Los landmarks siguen basados en porcentajes. No fue necesario modificar sus posi
 - [x] Consola con 0 errores y 0 advertencias relevantes.
 - [x] `npm run build` completado.
 
-## 18. Pendientes fuera de esta iteración
+## 18. Iteración 3 — Recorrido, dificultad y aeropuerto
+
+### Duración y configuración
+
+La duración se midió desde **Comenzar viaje** hasta la aparición visible de **Vuelo completado**, usando el juego real en navegador:
+
+| Parámetro | Antes | Después |
+|---|---:|---:|
+| Duración total | 180,62 s | 84,864 s |
+| `CONFIG.finalDistance` | 31500 | 14800 |
+| `CONFIG.cruiseSpeed` | 158 | 174 |
+| Incremento de velocidad de ruta | 30 interno | `routeSpeedBoost: 36` |
+| `CONFIG.obstacleGap` | `[680, 1150]` | `[540, 1250]` |
+| Inicio de llegada | 92 % | `approachAt: 86 %` |
+
+La nueva duración reserva 17 segundos para aproximación, aterrizaje, taxi y desembarque. La partida cronometrada finalizó con 34 % de combustible pese a impactos; el valor no fue forzado a cero.
+
+### Dificultad progresiva
+
+`getDifficulty(progress)` produce una curva suave y centralizada:
+
+- velocidad propia de obstáculos: 18 → 132 unidades/s;
+- separación de aparición: 1250 → 540 unidades;
+- amplitud de movimiento: 12 → 88 unidades;
+- 0–20 %: pájaros, globos y bandadas con espacios amplios;
+- 20–45 %: combinaciones ligeras y mayor velocidad;
+- 45–70 %: bandadas, globos meteorológicos y tormentas;
+- 70–90 %: meteoritos, satélites y trayectorias más rápidas;
+- 90–100 %: obstáculos eliminados para dejar libre la aproximación.
+
+Cada obstáculo posee `vx`, `vy`, amplitud y frecuencia. Pájaros y bandadas cruzan y cambian altura; globos y tormentas se mueven lentamente; meteoritos y satélites adquieren mayor velocidad relativa. Radio de colisión, daño e invulnerabilidad permanecen sin cambios.
+
+### Aeropuerto y llegada
+
+`WorldRenderer.drawAirport()` construye mediante Canvas 2D:
+
+- pista en perspectiva con luces laterales y eje central;
+- luces de aproximación;
+- terminal iluminada;
+- torre de control;
+- hangar y siluetas urbanas nocturnas;
+- calle de rodaje señalizada.
+
+La llegada usa timers con `deltaTime`, sin cadenas de `setTimeout`:
+
+1. `APPROACH` (3,5 s): descenso gradual, control parcial y despliegue del tren.
+2. `LANDING` (4,5 s): alineación semiautomática, touchdown y humo breve de ruedas.
+3. `TAXI` (4 s): desaceleración y desplazamiento hasta la terminal.
+4. `ARRIVED` (5 s): parada, apertura de puerta, escalera y desembarque de la tortuga.
+5. Final exitoso: textos centralizados en `GAME_TEXT` y botón **Volver a volar**.
+
+La tortuga desaparece de su ventana al comenzar el desembarque, baja la escalera, camina por la plataforma y hace un gesto feliz. La piloto permanece en el cockpit. `prefers-reduced-motion` y la opción manual reducen humo, shake y oscilaciones accesorias.
+
+## 19. Pruebas de Iteración 3
+
+- [x] Partida completa real: 84,864 s (máximo solicitado: 90 s).
+- [x] Ciudad, París, Egipto, Nueva York, Río, Japón y costa conservados.
+- [x] Transición de gran altura a atmósfera, ciudad y aeropuerto.
+- [x] Dificultad muestreada en 0 %, 30 %, 60 % y 80 %.
+- [x] Obstáculos con velocidad propia, trayectorias y separación progresiva.
+- [x] Ruta despejada desde 90 %.
+- [x] Colisiones, pérdida de combustible e invulnerabilidad preservadas.
+- [x] W, A, S, D, flechas y diagonales preservados de Iteración 1.
+- [x] Avión comercial, piloto, tortuga pasajera, motores, ventanas y luces preservados de Iteración 2.
+- [x] Aproximación, tren de aterrizaje, touchdown, taxi y estacionamiento.
+- [x] Puerta, escalera, desembarque y gesto final de la tortuga.
+- [x] Combustible no forzado a cero; 34 % en la ejecución cronometrada.
+- [x] Pausa durante vuelo y aproximación; reanudación sin salto.
+- [x] Reinicio completo mediante **Volver a volar**.
+- [x] Responsive en `390×844`, `1366×768` y `1920×1080`.
+- [x] Controles táctiles visibles en `390×844`.
+- [x] Movimiento reducido validado.
+- [x] Consola con 0 errores y 0 advertencias relevantes.
+- [x] `npm run build` completado y `standalone.html` regenerado.
+
+## 20. Pendiente conocido
 
 - Validación adicional en un dispositivo táctil físico; la emulación `390×844` pasó.
-- Audio, nuevos escenarios, obstáculos, HUD y controles permanecen fuera de Iteración 2.
-- No se inició ninguna Iteración 3.
 
-## 19. Estado
+## 21. Estado
 
-El juego conserva el movimiento protegido de Iteración 1, ahora presenta una aeronave comercial con piloto y tortuga pasajera, y completa todo el recorrido narrativo en aproximadamente tres minutos sin perder escenarios ni romper colisiones, pausa, reinicio o responsive.
+El proyecto conserva el movimiento de Iteración 1 y el avión comercial de Iteración 2. La versión vigente completa el recorrido internacional, aumenta gradualmente la dificultad y finaliza con un aterrizaje exitoso y la tortuga llegando a su destino en menos de 90 segundos.
 
-**ITERACIÓN 2: COMPLETADA**
+**ITERACIÓN 3: COMPLETADA**

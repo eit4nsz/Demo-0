@@ -1,6 +1,6 @@
 # Hasta la Luna
 
-Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una tortuga muy optimista despega de una ciudad nocturna, cruza lugares del mundo y trata de alcanzar la Luna antes de que el combustible decida otra cosa.
+Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una tortuga muy optimista viaja como pasajera en un avión comercial, cruza lugares del mundo y aterriza en un aeropuerto nocturno.
 
 ## Abrir el juego
 
@@ -38,22 +38,25 @@ El código de `game.js` se separa por responsabilidades: `InputManager`, `Player
 
 Edita `GAME_TEXT` al principio de `game.js`. Ahí están el título conceptual y las dos líneas del final. Los textos del menú se encuentran también en `index.html` para que sigan siendo visibles incluso si JavaScript está desactivado.
 
-### Duración y combustible
+### Duración, llegada y combustible
 
 En `CONFIG`, al principio de `game.js`:
 
 - `finalDistance`: longitud total del viaje; un valor mayor alarga la partida.
-- `endingAt`: porcentaje en el que comienza el fallo narrativo del motor.
+- `approachAt`: porcentaje en el que comienza la aproximación al aeropuerto.
 - `cruiseSpeed`: velocidad base.
+- `routeSpeedBoost`: incremento gradual de velocidad durante el recorrido.
+- `arrivalDurations`: duración de aproximación, aterrizaje, taxi y desembarque.
 - `collisionFuelLoss`: combustible perdido en una colisión.
 
-El consumo normal se ajusta dentro de `Player.update()`. El vaciado final se controla en `Game.updateEnding()`.
+El consumo normal se ajusta dentro de `Player.update()`. El combustible no se fuerza a cero al final: una partida limpia llega con reserva y las colisiones siguen restando combustible.
 
 ### Dificultad y obstáculos
 
-- `CONFIG.obstacleGap` controla la separación entre obstáculos al final y al principio del viaje.
+- `getDifficulty(progress)` centraliza velocidad propia, separación y amplitud de movimiento.
+- `CONFIG.obstacleGap`, `obstacleSpeed` y `obstacleAmplitude` definen sus rangos.
 - `ObstacleManager.chooseType()` decide qué aparece en cada capa de altura.
-- `ObstacleManager.update()` controla dispersión, generación adelantada, reciclaje y colisiones.
+- `ObstacleManager.update()` controla progresión, trayectorias, generación adelantada, reciclaje y colisiones.
 - `OBSTACLE_INFO` contiene los radios de colisión; son deliberadamente menores que el dibujo visual.
 
 ### Landmarks
@@ -98,4 +101,4 @@ node scripts/build-standalone.mjs
 
 El archivo generado funciona abriéndolo directamente y no consulta recursos externos.
 
-Para revisar rápidamente el final durante desarrollo, añade `?preview=ending` a la URL y pulsa **Comenzar viaje**. Este modo no modifica la partida normal.
+Para revisar rápidamente la aproximación, aterrizaje, taxi y desembarque durante desarrollo, añade `?preview=ending` a la URL y pulsa **Comenzar viaje**. Este modo no modifica la partida normal.
