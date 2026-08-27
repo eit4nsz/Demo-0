@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071126">
+  <meta name="description" content="Hasta la Luna: un pequeño viaje nocturno con una tortuga demasiado optimista.">
+  <title>Hasta la Luna</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="turtle-flight-game" class="game-shell" aria-label="Hasta la Luna, minijuego de vuelo">
+    <canvas id="game-canvas" aria-label="Escena del vuelo de la tortuga hacia la Luna"></canvas>
+
+    <section id="start-screen" class="screen screen--visible" aria-labelledby="game-title">
+      <div class="title-card">
+        <p class="eyebrow">Una aventura nocturna</p>
+        <h1 id="game-title">Hasta la <span>Luna</span></h1>
+        <p class="subtitle">Un pequeño viaje con una tortuga demasiado optimista.</p>
+        <button id="start-button" class="primary-button" type="button">Comenzar viaje <span aria-hidden="true">→</span></button>
+        <div class="controls-hint" aria-label="Controles">
+          <span><kbd>WASD</kbd> / <kbd>Flechas</kbd> Volar</span>
+          <span><kbd>P</kbd> / <kbd>ESC</kbd> Pausa</span>
+        </div>
+        <label class="motion-option"><input id="reduce-motion" type="checkbox"> Reducir movimiento</label>
+      </div>
+    </section>
+
+    <section id="hud" class="hud" aria-label="Datos de vuelo" hidden>
+      <div class="hud-group hud-group--stats">
+        <div><span>ALT</span><strong id="altitude-value">0 m</strong></div>
+        <div><span>DIST</span><strong id="distance-value">0 km</strong></div>
+      </div>
+      <div class="fuel-card">
+        <div class="fuel-label"><span>COMBUSTIBLE</span><strong id="fuel-value">100%</strong></div>
+        <div class="fuel-track" role="meter" aria-label="Combustible" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+          <i id="fuel-fill"></i>
+        </div>
+      </div>
+      <button id="pause-button" class="icon-button" type="button" aria-label="Pausar juego">Ⅱ</button>
+    </section>
+
+    <div id="region-label" class="region-label" aria-live="polite"></div>
+    <div id="flight-message" class="flight-message" aria-live="polite"></div>
+
+    <section id="pause-screen" class="screen" aria-labelledby="pause-title" hidden>
+      <div class="dialog-card dialog-card--compact">
+        <p class="eyebrow">El tiempo espera</p>
+        <h2 id="pause-title">Viaje en pausa</h2>
+        <p>La tortuga está aprovechando para mirar las estrellas.</p>
+        <button id="resume-button" class="primary-button" type="button">Continuar viaje</button>
+      </div>
+    </section>
+
+    <section id="ending-screen" class="screen" aria-labelledby="ending-title" hidden>
+      <div class="dialog-card ending-card">
+        <p class="eyebrow">Tan cerca… más o menos</p>
+        <h2 id="ending-title">Hasta aquí llegó el motor</h2>
+        <p id="ending-line-1" class="ending-main"></p>
+        <p id="ending-line-2" class="ending-sub"></p>
+        <button id="restart-button" class="primary-button" type="button">Volver a intentarlo <span aria-hidden="true">↻</span></button>
+      </div>
+    </section>
+
+    <div id="touch-controls" class="touch-controls" aria-label="Controles táctiles">
+      <div class="touch-pad">
+        <button type="button" data-key="left" aria-label="Mover a la izquierda">←</button>
+        <button type="button" data-key="right" aria-label="Mover a la derecha">→</button>
+      </div>
+      <div class="touch-pad touch-pad--vertical">
+        <button type="button" data-key="up" aria-label="Elevar el morro">↑</button>
+        <button type="button" data-key="down" aria-label="Bajar el morro">↓</button>
+      </div>
+    </div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

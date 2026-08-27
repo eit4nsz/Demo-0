@@ -1,0 +1,15 @@
+{
+  "name": "hasta-la-luna",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/build-standalone.mjs && vite build && node scripts/build-worker.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
+    "vite": "8.0.13"
+  },
+  "type": "module"
+}
