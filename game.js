@@ -4,16 +4,18 @@
   const GAME_TEXT = Object.freeze({
     title: "Hasta la Luna",
     intro: "Un pequeño viaje con una tortuga demasiado optimista.",
-    endingLine1: "Parece que no alcanzó la gasolina para llegar hasta la Luna…",
-    endingLine2: "Tal vez el viaje era más importante que llegar."
+    endingLine1: "Vuelo completado.",
+    endingLine2: "La tortuga llegó a su destino."
   });
 
   const CONFIG = Object.freeze({
-    finalDistance: 31500,
-    endingAt: 0.92,
+    finalDistance: 14800,
+    endingAt: 0.9,
     maxAltitude: 7600,
     minAltitude: 110,
-    cruiseSpeed: 158,
+    cruiseSpeed: 174,
+    routeSpeedBoost: 36,
+    endingDuration: 10,
     obstacleGap: [680, 1150],
     collisionFuelLoss: 11,
     invulnerabilitySeconds: 1.8
@@ -154,7 +156,7 @@
       this.velocity.y += (verticalInput * 560 + gentleLift) * dt;
       this.velocity.y *= Math.pow(.975, dt * 60);
       this.velocity.y = clamp(this.velocity.y, -220, 240);
-      const cruiseSpeed = CONFIG.cruiseSpeed + progress * 30;
+      const cruiseSpeed = CONFIG.cruiseSpeed + progress * CONFIG.routeSpeedBoost;
       const steeringSpeed = clamp(viewWidth * .32, 140, 420);
       const desiredSpeed = cruiseSpeed + horizontalInput * steeringSpeed;
       this.velocity.x = lerp(this.velocity.x, desiredSpeed, 1 - Math.pow(.9, dt * 60));
@@ -171,7 +173,7 @@
       if (this.blinkTimer <= 0) { this.blink = .14; this.blinkTimer = 2 + Math.random() * 3.5; }
       this.blink = Math.max(0, this.blink - dt);
       const intensive = Math.abs(verticalInput) + Math.abs(horizontalInput) * .5;
-      this.fuel = Math.max(0, this.fuel - dt * (.18 + intensive * .018));
+      this.fuel = Math.max(0, this.fuel - dt * (.5 + intensive * .025));
     }
     collide() {
       if (this.invulnerability > 0) return false;
@@ -189,7 +191,7 @@
     reset() { this.x = 0; this.speed = CONFIG.cruiseSpeed; this.altitude = 500; this.shake = 0; }
     update(dt, player, progress, trackCruise = true) {
       if (trackCruise) {
-        const targetSpeed = CONFIG.cruiseSpeed + progress * 30;
+        const targetSpeed = CONFIG.cruiseSpeed + progress * CONFIG.routeSpeedBoost;
         this.speed = lerp(this.speed, targetSpeed, 1 - Math.pow(.94, dt * 60));
       } else {
         this.speed = player.velocity.x;
@@ -606,7 +608,7 @@
       this.time = 0;
       this.lastTimestamp = 0;
       this.failureTimer = 0;
-      this.failureFuel = 100;
+      this.arrivalFuel = 100;
       this.nextLandmark = 0;
       this.raf = 0;
       this.running = false;
@@ -673,7 +675,7 @@
 
     reset(playImmediately = false) {
       this.player.reset(); this.camera.reset(); this.obstacles.reset(); this.particles.clear(); this.ui.reset();
-      this.progress = 0; this.failureTimer = 0; this.failureFuel = 100; this.nextLandmark = 1; this.input.clear();
+      this.progress = 0; this.failureTimer = 0; this.arrivalFuel = 100; this.nextLandmark = 1; this.input.clear();
       this.state = playImmediately ? "PLAYING" : "MENU";
       if (playImmediately) { this.ui.enterGame(); this.ui.announceRegion("La ciudad despierta"); }
     }
@@ -714,29 +716,22 @@
     }
 
     beginEnding() {
-      this.state = "ENDING"; this.failureTimer = 0; this.failureFuel = this.player.fuel; this.input.clear();
-      this.ui.announceMessage("La Luna parece estar a un último suspiro…", 3.8);
+      this.state = "ENDING"; this.failureTimer = 0; this.arrivalFuel = this.player.fuel; this.input.clear();
+      this.ui.announceMessage("Llegando al destino…", 3.8);
     }
 
     updateEnding(dt) {
       this.failureTimer += dt;
-      const drain = smoothstep(1.4, 10.5, this.failureTimer);
-      this.player.fuel = this.failureFuel * (1 - drain);
-      this.player.velocity.x = lerp(this.player.velocity.x, this.failureTimer < 3 ? 145 : 0, 1 - Math.pow(.968, dt * 60));
-      this.player.velocity.y = lerp(this.player.velocity.y, -14, 1 - Math.pow(.985, dt * 60));
+      this.player.fuel = this.arrivalFuel;
+      this.player.velocity.x = lerp(this.player.velocity.x, this.failureTimer < 4 ? 150 : 70, 1 - Math.pow(.968, dt * 60));
+      this.player.velocity.y = lerp(this.player.velocity.y, -8, 1 - Math.pow(.985, dt * 60));
       this.player.position.x += this.player.velocity.x * dt;
       this.player.position.y = Math.max(CONFIG.minAltitude, this.player.position.y + this.player.velocity.y * dt);
       this.player.rotation = lerp(this.player.rotation, .08, 1 - Math.pow(.98, dt * 60));
       this.progress = clamp(this.player.position.x / CONFIG.finalDistance, 0, .985);
       this.camera.update(dt, this.player, this.progress, false);
-      if (this.failureTimer > 3.3 && this.failureTimer - dt <= 3.3) this.ui.announceMessage("Puf… puf… ¿eso era la reserva?", 3.4);
-      if (this.failureTimer > 6) {
-        const point = this.getPlayerScreenPosition();
-        if (Math.random() < dt * 8) this.particles.emit(point.x - 55, point.y, { count: 2, color: "130,145,165", speed: 30, life: 1.2, size: 7 });
-        if (!this.reducedMotion) this.camera.shake = Math.max(this.camera.shake, .14 + drain * .18);
-      }
-      if (this.failureTimer >= 11.5) {
-        this.player.fuel = 0; this.player.velocity.x = 0; this.state = "GAME_OVER"; this.ui.showEnding();
+      if (this.failureTimer >= CONFIG.endingDuration) {
+        this.player.velocity.x = 0; this.state = "GAME_OVER"; this.ui.showEnding();
       }
     }
 
