@@ -928,9 +928,9 @@ kbd {
     cruiseSpeed: 174,
     routeSpeedBoost: 36,
     arrivalDurations: Object.freeze({ approach: 3.5, landing: 4.5, taxi: 4, disembark: 5 }),
-    obstacleGap: [540, 1250],
-    obstacleSpeed: [18, 132],
-    obstacleAmplitude: [12, 88],
+    obstacleGap: [365, 980],
+    obstacleSpeed: [38, 172],
+    obstacleAmplitude: [16, 108],
     approachClearAt: 0.9,
     collisionFuelLoss: 11,
     invulnerabilitySeconds: 1.8
@@ -950,7 +950,9 @@ kbd {
       level,
       obstacleSpeed: lerp(CONFIG.obstacleSpeed[0], CONFIG.obstacleSpeed[1], level),
       spawnGap: lerp(CONFIG.obstacleGap[1], CONFIG.obstacleGap[0], level),
-      movementAmplitude: lerp(CONFIG.obstacleAmplitude[0], CONFIG.obstacleAmplitude[1], level)
+      movementAmplitude: lerp(CONFIG.obstacleAmplitude[0], CONFIG.obstacleAmplitude[1], level),
+      pairChance: smoothstep(.34, .82, progress) * .42,
+      visualIntensity: lerp(.72, 1.18, level)
     };
   };
 
@@ -1146,7 +1148,7 @@ kbd {
 
   class ObstacleManager {
     constructor() { this.reset(); }
-    reset() { this.items = []; this.nextSpawnX = 900; this.random = new SeededRandom(9031); }
+    reset() { this.items = []; this.nextSpawnX = 900; this.random = new SeededRandom(9031); this.lastType = ""; this.repeatCount = 0; }
     chooseType(progress) {
       const roll = this.random.next();
       if (progress < .2) return roll < .56 ? "bird" : roll < .82 ? "balloon" : "flock";
@@ -1154,34 +1156,56 @@ kbd {
       if (progress < .7) return roll < .38 ? "flock" : roll < .7 ? "weather" : "storm";
       return roll < .38 ? "meteor" : roll < .63 ? "satellite" : roll < .82 ? "storm" : "weather";
     }
+    selectType(progress) {
+      let type = this.chooseType(progress);
+      if (type === this.lastType) this.repeatCount += 1;
+      else this.repeatCount = 0;
+      if (this.repeatCount >= 2) {
+        const alternatives = progress < .2 ? ["bird", "balloon", "flock"]
+          : progress < .45 ? ["bird", "flock", "balloon", "weather"]
+          : progress < .7 ? ["flock", "weather", "storm"]
+          : ["meteor", "satellite", "storm", "weather"];
+        type = alternatives.find(candidate => candidate !== this.lastType) || type;
+        this.repeatCount = 0;
+      }
+      this.lastType = type;
+      return type;
+    }
+    createItem(type, x, y, difficulty) {
+      const speedFactor = { bird: 1.08, flock: .9, balloon: .14, storm: .22, weather: .29, meteor: 1.4, satellite: .78 }[type];
+      const amplitudeFactor = { bird: .58, flock: .74, balloon: .7, storm: .25, weather: .62, meteor: .3, satellite: .48 }[type];
+      const verticalDirection = type === "bird" || type === "flock" || type === "meteor"
+        ? (this.random.next() < .5 ? -1 : 1)
+        : 0;
+      return {
+        x, y, baseY: y, type,
+        phase: this.random.range(0, Math.PI * 2),
+        vx: -difficulty.obstacleSpeed * speedFactor * this.random.range(.84, 1.18),
+        vy: verticalDirection * difficulty.obstacleSpeed * this.random.range(.08, .24),
+        amplitude: difficulty.movementAmplitude * amplitudeFactor,
+        frequency: type === "bird" || type === "flock" ? this.random.range(2.35, 3.65) : this.random.range(.62, 1.18),
+        intensity: difficulty.visualIntensity,
+        passed: false
+      };
+    }
     update(dt, player, progress, onHit) {
       if (progress >= CONFIG.approachClearAt) {
         this.items.length = 0;
         return;
       }
       const difficulty = getDifficulty(progress);
-      while (this.nextSpawnX < player.position.x + 1550 && progress < CONFIG.approachClearAt - .02) {
-        const type = this.chooseType(progress);
+      while (this.nextSpawnX < player.position.x + 1780 && progress < CONFIG.approachClearAt - .02) {
+        const type = this.selectType(progress);
         const altitudeSpread = progress < .2 ? 430 : progress < .65 ? 700 : 900;
         const y = clamp(player.position.y + this.random.range(-altitudeSpread, altitudeSpread), CONFIG.minAltitude + 60, CONFIG.maxAltitude - 100);
-        const speedFactor = { bird: 1, flock: .82, balloon: .12, storm: .18, weather: .24, meteor: 1.35, satellite: .72 }[type];
-        const amplitudeFactor = { bird: .52, flock: .7, balloon: .65, storm: .2, weather: .55, meteor: .25, satellite: .42 }[type];
-        const verticalDirection = type === "bird" || type === "flock" || type === "meteor"
-          ? (this.random.next() < .5 ? -1 : 1)
-          : 0;
-        this.items.push({
-          x: this.nextSpawnX,
-          y,
-          baseY: y,
-          type,
-          phase: this.random.range(0, Math.PI * 2),
-          vx: -difficulty.obstacleSpeed * speedFactor * this.random.range(.82, 1.18),
-          vy: verticalDirection * difficulty.obstacleSpeed * this.random.range(.08, .22),
-          amplitude: difficulty.movementAmplitude * amplitudeFactor,
-          frequency: type === "bird" || type === "flock" ? this.random.range(2.2, 3.2) : this.random.range(.55, 1.05),
-          passed: false
-        });
-        this.nextSpawnX += difficulty.spawnGap * this.random.range(.88, 1.18);
+        this.items.push(this.createItem(type, this.nextSpawnX, y, difficulty));
+        if (progress > .38 && progress < .86 && this.random.next() < difficulty.pairChance) {
+          const partnerType = this.random.next() < .58 ? type : this.selectType(progress);
+          const direction = y > player.position.y ? -1 : 1;
+          const partnerY = clamp(y + direction * this.random.range(410, 620), CONFIG.minAltitude + 80, CONFIG.maxAltitude - 120);
+          this.items.push(this.createItem(partnerType, this.nextSpawnX + this.random.range(130, 230), partnerY, difficulty));
+        }
+        this.nextSpawnX += difficulty.spawnGap * this.random.range(.86, 1.13);
       }
       this.items.forEach(item => {
         item.x += item.vx * dt;
@@ -1872,7 +1896,8 @@ kbd {
       this.state = "PLAYING";
       this.ui.enterGame();
       this.ui.announceRegion("La ciudad despierta");
-      if (new URLSearchParams(location.search).get("preview") === "ending") {
+      const preview = new URLSearchParams(location.search).get("preview");
+      if (preview === "ending") {
         this.player.position.x = CONFIG.finalDistance * CONFIG.approachAt;
         this.player.position.y = 6500;
         this.camera.x = this.player.position.x;
@@ -1880,6 +1905,16 @@ kbd {
         this.progress = CONFIG.approachAt;
         this.obstacles.nextSpawnX = this.player.position.x + 1800;
         this.beginApproach();
+      } else if (preview === "obstacles") {
+        this.player.position.x = CONFIG.finalDistance * .62;
+        this.player.position.y = 4450;
+        this.camera.x = this.player.position.x;
+        this.camera.altitude = this.player.position.y;
+        this.progress = .62;
+        this.nextLandmark = this.world.landmarks.findIndex(landmark => landmark.at > this.progress);
+        if (this.nextLandmark < 0) this.nextLandmark = this.world.landmarks.length;
+        this.obstacles.nextSpawnX = this.player.position.x + 520;
+        this.ui.announceRegion("Zona de tráfico intenso · 62 %");
       }
     }
 
@@ -2110,21 +2145,42 @@ kbd {
 
     drawObstacle(ctx, item, x, y) {
       ctx.save(); ctx.translate(x, y);
+      const visualScale = clamp(item.intensity || 1, .82, 1.14);
+      ctx.scale(visualScale, visualScale);
       const bob = Math.sin(item.phase) * 5;
       if (item.type === "bird" || item.type === "flock") {
-        ctx.strokeStyle = "#25213c"; ctx.lineWidth = 5; ctx.lineCap = "round";
         const count = item.type === "flock" ? 4 : 1;
-        for (let i=0;i<count;i+=1) { const ox=(i%2)*32-(i>1?18:0), oy=Math.floor(i/2)*25; const flap=Math.sin(item.phase+i)*7; ctx.beginPath(); ctx.moveTo(ox-13,oy+bob); ctx.quadraticCurveTo(ox-5,oy-8-flap,ox,oy); ctx.quadraticCurveTo(ox+7,oy-8+flap,ox+15,oy+bob); ctx.stroke(); }
+        for (let i=0;i<count;i+=1) {
+          const ox=(i%2)*34-(i>1?19:0), oy=Math.floor(i/2)*26, flap=Math.sin(item.phase+i)*7;
+          ctx.save();ctx.translate(ox,oy+bob);
+          const wing=ctx.createLinearGradient(0,-18,0,8);wing.addColorStop(0,"#596174");wing.addColorStop(1,"#171d32");
+          ctx.fillStyle=wing;ctx.strokeStyle="#101526";ctx.lineWidth=2;ctx.lineJoin="round";
+          ctx.beginPath();ctx.moveTo(-1,1);ctx.quadraticCurveTo(-12,-17-flap,-22,-8);ctx.quadraticCurveTo(-11,-1,-5,6);ctx.quadraticCurveTo(0,10,5,6);ctx.quadraticCurveTo(12,-3,22,-8+flap*.35);ctx.quadraticCurveTo(13,-15+flap,1,1);ctx.closePath();ctx.fill();ctx.stroke();
+          ctx.fillStyle="#273049";ctx.beginPath();ctx.ellipse(1,4,8,4,-.05,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle="#f4bc63";ctx.beginPath();ctx.moveTo(8,2);ctx.lineTo(15,4);ctx.lineTo(8,6);ctx.closePath();ctx.fill();
+          ctx.fillStyle="#fff1b0";ctx.beginPath();ctx.arc(6.3,2.6,1.35,0,Math.PI*2);ctx.fill();ctx.fillStyle="#172033";ctx.beginPath();ctx.arc(6.6,2.7,.65,0,Math.PI*2);ctx.fill();
+          ctx.restore();
+        }
       } else if (item.type === "balloon" || item.type === "weather") {
-        ctx.fillStyle = item.type === "weather" ? "#e6c47b" : "#d67c78"; ctx.beginPath(); ctx.ellipse(0,bob-10,24,31,0,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.arc(-4,bob-16,13,2.2,4.9); ctx.stroke();
-        ctx.strokeStyle = "#9b836a"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-10,bob+17);ctx.lineTo(-6,bob+37);ctx.moveTo(10,bob+17);ctx.lineTo(6,bob+37);ctx.stroke(); ctx.fillStyle="#8a654c";ctx.fillRect(-8,bob+35,16,10);
+        const balloon=ctx.createRadialGradient(-8,bob-21,3,0,bob-9,34);
+        balloon.addColorStop(0,"#ffe5a2");balloon.addColorStop(.38,item.type === "weather"?"#e6c467":"#e77772");balloon.addColorStop(1,item.type === "weather"?"#8b6b3d":"#803b55");
+        ctx.fillStyle=balloon;ctx.strokeStyle="#4e3444";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,bob-10,25,32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.save();ctx.beginPath();ctx.ellipse(0,bob-10,24,31,0,0,Math.PI*2);ctx.clip();ctx.fillStyle="rgba(39,100,127,.32)";ctx.fillRect(-5,bob-43,10,66);ctx.fillStyle="rgba(255,232,167,.2)";ctx.fillRect(-17,bob-42,7,62);ctx.restore();
+        ctx.strokeStyle="#a88967";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-11,bob+17);ctx.lineTo(-7,bob+38);ctx.moveTo(11,bob+17);ctx.lineTo(7,bob+38);ctx.stroke();
+        const basket=ctx.createLinearGradient(0,bob+34,0,bob+47);basket.addColorStop(0,"#a9784f");basket.addColorStop(1,"#573b34");ctx.fillStyle=basket;ctx.fillRect(-9,bob+36,18,11);ctx.strokeRect(-9,bob+36,18,11);
       } else if (item.type === "storm") {
-        this.world.drawCloud(ctx, 0, bob, 62, .8); ctx.fillStyle="#d9d68a";ctx.beginPath();ctx.moveTo(4,bob+18);ctx.lineTo(-8,bob+46);ctx.lineTo(5,bob+42);ctx.lineTo(-3,bob+67);ctx.lineTo(22,bob+34);ctx.lineTo(8,bob+36);ctx.closePath();ctx.fill();
+        ctx.save();ctx.shadowColor="rgba(116,112,220,.48)";ctx.shadowBlur=16;this.world.drawCloud(ctx, 0, bob, 64, .94);ctx.restore();
+        ctx.strokeStyle="rgba(121,177,218,.48)";ctx.lineWidth=2;for(let rain=-35;rain<=42;rain+=19){ctx.beginPath();ctx.moveTo(rain,bob+22);ctx.lineTo(rain-7,bob+42);ctx.stroke();}
+        const bolt=ctx.createLinearGradient(0,bob+19,0,bob+70);bolt.addColorStop(0,"#fff5a8");bolt.addColorStop(1,"#ee9e3d");ctx.fillStyle=bolt;ctx.shadowColor="#ffe68e";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(4,bob+18);ctx.lineTo(-8,bob+46);ctx.lineTo(5,bob+42);ctx.lineTo(-3,bob+67);ctx.lineTo(22,bob+34);ctx.lineTo(8,bob+36);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
       } else if (item.type === "meteor") {
-        const tail=ctx.createLinearGradient(-80,0,15,0);tail.addColorStop(0,"rgba(235,132,100,0)");tail.addColorStop(1,"rgba(255,191,126,.55)");ctx.fillStyle=tail;ctx.beginPath();ctx.moveTo(-90,-13);ctx.lineTo(10,-18);ctx.lineTo(12,17);ctx.lineTo(-90,8);ctx.fill(); ctx.fillStyle="#8f766d";ctx.beginPath();ctx.arc(12,0,18,0,Math.PI*2);ctx.fill();
+        const tail=ctx.createLinearGradient(-100,0,18,0);tail.addColorStop(0,"rgba(229,64,89,0)");tail.addColorStop(.58,"rgba(241,104,73,.28)");tail.addColorStop(1,"rgba(255,220,125,.84)");ctx.fillStyle=tail;ctx.beginPath();ctx.moveTo(-104,-16);ctx.lineTo(12,-20);ctx.lineTo(15,19);ctx.lineTo(-104,9);ctx.fill();
+        ctx.strokeStyle="rgba(255,205,102,.36)";ctx.lineWidth=3;for(let spark=0;spark<3;spark++){ctx.beginPath();ctx.moveTo(-72-spark*8,-9+spark*9);ctx.lineTo(-31-spark*4,-6+spark*6);ctx.stroke();}
+        const rock=ctx.createRadialGradient(5,-7,2,12,0,20);rock.addColorStop(0,"#d7b190");rock.addColorStop(.45,"#8c675f");rock.addColorStop(1,"#4e3b49");ctx.fillStyle=rock;ctx.strokeStyle="#342d3c";ctx.lineWidth=2;ctx.beginPath();ctx.arc(12,0,19,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle="rgba(47,35,46,.5)";ctx.beginPath();ctx.ellipse(6,-4,5,3,.4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(17,6,3.5,0,Math.PI*2);ctx.fill();
       } else {
-        ctx.rotate(.22); ctx.fillStyle="#b8c7d6";ctx.fillRect(-23,-10,46,20);ctx.fillStyle="#5377a7";ctx.fillRect(-61,-18,34,36);ctx.fillRect(27,-18,34,36);ctx.fillStyle="#f3cc78";ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+        ctx.rotate(.22);const body=ctx.createLinearGradient(0,-12,0,12);body.addColorStop(0,"#edf5f7");body.addColorStop(1,"#70869a");ctx.fillStyle=body;ctx.strokeStyle="#32465c";ctx.lineWidth=2;ctx.fillRect(-23,-10,46,20);ctx.strokeRect(-23,-10,46,20);
+        ctx.fillStyle="#365d98";ctx.fillRect(-63,-19,36,38);ctx.fillRect(27,-19,36,38);ctx.strokeStyle="rgba(153,213,234,.58)";ctx.lineWidth=1;for(let gx=-59;gx<-28;gx+=8){ctx.beginPath();ctx.moveTo(gx,-18);ctx.lineTo(gx,18);ctx.stroke();}for(let gx=31;gx<63;gx+=8){ctx.beginPath();ctx.moveTo(gx,-18);ctx.lineTo(gx,18);ctx.stroke();}for(let gy=-10;gy<19;gy+=10){ctx.beginPath();ctx.moveTo(-62,gy);ctx.lineTo(-28,gy);ctx.moveTo(28,gy);ctx.lineTo(62,gy);ctx.stroke();}
+        ctx.fillStyle="#f3cc78";ctx.shadowColor="#f3cc78";ctx.shadowBlur=8;ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle="#cbdce6";ctx.beginPath();ctx.arc(0,-13,11,Math.PI,Math.PI*2);ctx.stroke();
       }
       ctx.restore();
     }
