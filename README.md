@@ -1,6 +1,6 @@
-# Hasta la Luna
+# Escuela de Aviación
 
-Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una tortuga muy optimista viaja como pasajera en un avión comercial, cruza lugares del mundo y aterriza en un aeropuerto nocturno.
+Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una capitana recorre el mundo de noche con una tortuga como pasajera y aterriza en un aeropuerto iluminado. La bienvenida presenta a la piloto junto a su elegante gata negra.
 
 ## Abrir el juego
 
@@ -23,8 +23,8 @@ El proyecto también incluye herramientas opcionales de desarrollo. Si ya tienes
 
 ## Estructura
 
-- `index.html`: interfaz, menús, HUD y controles táctiles.
-- `styles.css`: presentación responsive de la interfaz.
+- `index.html`: portada ilustrada, interfaz, menús, HUD y controles táctiles.
+- `styles.css`: identidad visual, personajes CSS de bienvenida y presentación responsive.
 - `game.js`: motor, vuelo, cámara, mundo procedural, obstáculos, colisiones y render Canvas.
 - `standalone.html`: copia autocontenida generada desde los tres archivos anteriores.
 - `assets/`: carpetas preparadas para imágenes, sprites, audio y fuentes futuras.
@@ -72,7 +72,7 @@ La lista `WorldRenderer.landmarks` define posición, nombre y tipo. Para agregar
 
 Coloca PNG o WebP en `assets/sprites/`. Los puntos de sustitución principales son:
 
-- `PlaneRenderer.render()` y `PlaneRenderer.drawTurtle()` para avión y piloto.
+- `PlaneRenderer.render()`, `drawCockpit()` y `drawPassengerTurtle()` para avión y personajes.
 - `Game.drawObstacle()` para obstáculos.
 - `WorldRenderer.drawLandmarkShape()` para landmarks.
 
@@ -80,7 +80,7 @@ Puedes precargar imágenes al crear `Game` y dibujarlas con `ctx.drawImage()` si
 
 ## Integración en otra web
 
-La instancia está encapsulada en `#turtle-flight-game`. La API pública mínima es:
+La instancia está encapsulada en `#turtle-flight-game`. La API pública mínima conserva su nombre histórico por compatibilidad; el nombre visible del juego es **Escuela de Aviación**:
 
 ```js
 HastaLaLuna.startGame();
@@ -101,4 +101,4 @@ node scripts/build-standalone.mjs
 
 El archivo generado funciona abriéndolo directamente y no consulta recursos externos.
 
-Para revisar rápidamente la aproximación, aterrizaje, taxi y desembarque durante desarrollo, añade `?preview=ending` a la URL y pulsa **Comenzar viaje**. Este modo no modifica la partida normal.
+Para revisar rápidamente la aproximación, aterrizaje, taxi y desembarque durante desarrollo, añade `?preview=ending` a la URL y pulsa **Comenzar vuelo**. Este modo no modifica la partida normal.

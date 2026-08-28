@@ -3,7 +3,7 @@
 ## 1. Identificación
 
 - Proyecto de trabajo: **Escuela de aviación**.
-- Nombre actual del minijuego: **Hasta la Luna**.
+- Nombre público actual del minijuego: **Escuela de Aviación**.
 - Tipo: minijuego web de vuelo arcade, narrativo y responsive.
 - Carpeta obligatoria: `D:\HTML\Escuela de aviación\`.
 - Repositorio: `https://github.com/eit4nsz/Demo-0`.
@@ -16,7 +16,7 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 
 | Área | Estado |
 |---|---|
-| Menú e inicio | Implementado |
+| Portada, menú e inicio | Rediseñados y validados en Iteración 4A |
 | Bucle con `requestAnimationFrame` | Implementado |
 | Movimiento WASD y flechas | Corregido y validado en Iteración 1 |
 | Movimiento táctil | Implementado; emulación móvil validada |
@@ -27,11 +27,12 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 | Combustible e invulnerabilidad | Preservados y probados |
 | Pausa, reanudación y reinicio | Implementados y probados |
 | Escenarios, landmarks, aeropuerto y llegada | Implementados |
-| Avión comercial, piloto y tortuga pasajera | Implementados en Iteración 2 |
+| Avión comercial, piloto y tortuga pasajera | Implementados en Iteración 2; legibilidad mejorada en Iteración 4A |
+| Gata negra de la portada | Implementada en Iteración 4A; no forma parte del gameplay |
 | Dificultad progresiva | Implementada en Iteración 3 |
 | Duración total | 84,864 s; validada en Iteración 3 |
 | Responsive | Validado en tres resoluciones objetivo |
-| Consola | 0 errores después de Iteración 3 |
+| Consola | 0 errores después de Iteración 4A |
 | Build y versión autocontenida | Implementados y validados |
 
 ## 3. Tecnologías y lenguajes
@@ -91,8 +92,8 @@ D:\HTML\Escuela de aviación\
 
 ## 6. Responsabilidad de archivos
 
-- **`index.html`:** documento principal; Canvas, menú, HUD, pausa, final, mensajes y controles. Incluye favicon transparente embebido para evitar un 404 de consola.
-- **`styles.css`:** presentación, layout responsive y visibilidad táctil mediante `(pointer: coarse)` o ancho máximo de 760 px.
+- **`index.html`:** documento principal; portada ilustrada, Canvas, menú, HUD, pausa, final, mensajes y controles. Incluye favicon transparente embebido para evitar un 404 de consola.
+- **`styles.css`:** identidad visual de bienvenida, ilustraciones ligeras de la piloto y la gata, layout responsive y visibilidad táctil mediante `(pointer: coarse)` o ancho máximo de 760 px.
 - **`game.js`:** fuente principal con configuración, clases, física, cámara, render y API.
 - **`public/game.js`:** copia generada de `game.js` usada por Vite/Sites; no se edita manualmente.
 - **`standalone.html`:** entregable autocontenido generado.
@@ -118,7 +119,7 @@ D:\HTML\Escuela de aviación\
 - **`ObstacleManager`:** generación por etapas, velocidad propia, trayectorias, limpieza y colisión mundial.
 - **`ParticleSystem`:** partículas livianas de impacto y motor.
 - **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno, atmósfera, landmarks y aeropuerto nocturno.
-- **`PlaneRenderer`:** dibuja un avión comercial original con motores, ventanas, luces, piloto, tortuga pasajera, tren y puerta; representa el estado sin controlar la física.
+- **`PlaneRenderer`:** dibuja un avión comercial original con motores, ventanas iluminadas, cockpit ampliado, piloto, tortuga pasajera, tren y puerta; representa el estado sin controlar la física.
 - **`UIManager`:** HUD, mensajes, regiones y overlays.
 - **`Game`:** ciclo de vida, estados, límites, progresión, render y coordinación.
 
@@ -319,14 +320,14 @@ El avión de hélice fue reemplazado por una aeronave comercial original dibujad
 - ocho ventanas con iluminación cálida;
 - luces roja, verde y blanca intermitente;
 - estelas tenues procedentes de los motores durante el vuelo;
-- escala responsive de 82 % en pantallas estrechas y 100 % en escritorio;
+- escala responsive original de 82 % en pantallas estrechas y 100 % en escritorio, sustituida por el ajuste visual moderado de Iteración 4A;
 - pitch visual limitado a `-0.22…0.20` radianes para una inclinación comercial creíble.
 
 No queda ninguna hélice, marca, aerolínea ni modelo real copiado.
 
 ### Personajes
 
-- La piloto es una mujer dentro del cockpit, con cabello y moño discretos, gorra, uniforme oscuro, cuello claro, brazo al mando y reacción sutil a impactos.
+- La piloto es una mujer dentro del cockpit, con cabello negro lacio, gorra, uniforme oscuro, cuello claro, brazo al mando y reacción sutil a impactos.
 - La tortuga dejó de ser piloto y aparece como pasajera en una ventana cálida del fuselaje.
 - La tortuga conserva parpadeo, movimiento leve de cabeza, reacción a impactos y mirada ascendente durante el final.
 
@@ -377,7 +378,7 @@ Los landmarks siguen basados en porcentajes. No fue necesario modificar sus posi
 
 ### Duración y configuración
 
-La duración se midió desde **Comenzar viaje** hasta la aparición visible de **Vuelo completado**, usando el juego real en navegador:
+La duración se midió desde el botón de inicio —actualmente **Comenzar vuelo**— hasta la aparición visible de **Vuelo completado**, usando el juego real en navegador:
 
 | Parámetro | Antes | Después |
 |---|---:|---:|
@@ -448,12 +449,45 @@ La tortuga desaparece de su ventana al comenzar el desembarque, baja la escalera
 - [x] Consola con 0 errores y 0 advertencias relevantes.
 - [x] `npm run build` completado y `standalone.html` regenerado.
 
-## 20. Pendiente conocido
+## 20. Iteración 4A — Identidad visual y cabina
+
+### Nombre público y portada
+
+El nombre mostrado al usuario cambió a **Escuela de Aviación** en el título HTML, metadata social, encabezado principal y textos configurables. Los nombres de la API `HastaLaLuna` se conservaron para no romper integraciones existentes.
+
+La pantalla inicial ahora usa una composición nocturna de dos columnas que se reorganiza en vertical en pantallas pequeñas. Incluye:
+
+- una capitana comercial ilustrada con HTML y CSS, cabello negro lacio, gorra, blazer, camisa clara y detalle dorado;
+- una gata negra de ojos amarillos y manchas doradas sutiles, presente solo en la bienvenida;
+- título, texto breve, botón **Comenzar vuelo**, controles y opción de movimiento reducido;
+- tarjeta social `public/og.png` alineada con la nueva marca.
+
+### Avión, cockpit y pasajeros
+
+- La escala visual usa `clamp(viewWidth / 480, 0.9, 1.08)`, un aumento moderado que no modifica la física.
+- El cockpit es más amplio y luminoso; la capitana conserva gorra, cabello negro lacio y uniforme de la portada en una versión simplificada para Canvas.
+- Las ventanas son más grandes, tienen profundidad mediante un degradado cálido y un contorno de mayor contraste.
+- La ventana de la tortuga mide 15 × 12,5 unidades y su personaje recibió caparazón, cabeza y ojo más legibles.
+- La hitbox sigue centrada en el fuselaje con radio 26; no creció con la silueta visual.
+
+### Validación
+
+- [x] Branding **Escuela de Aviación** en portada, HTML y metadata.
+- [x] Piloto y gata visibles en la bienvenida.
+- [x] Botón de inicio y transición al vuelo.
+- [x] Capitana y tortuga legibles dentro del avión.
+- [x] Avión comercial, motores, luces y aterrizaje preservados.
+- [x] Hitbox de radio 26 y sistemas de movimiento sin cambios.
+- [x] Responsive en `390×844`, `1366×768` y `1920×1080`.
+- [x] Consola con 0 errores y 0 advertencias relevantes.
+- [x] `npm run build` completado y `standalone.html` regenerado.
+
+## 21. Pendiente conocido
 
 - Validación adicional en un dispositivo táctil físico; la emulación `390×844` pasó.
 
-## 21. Estado
+## 22. Estado
 
-El proyecto conserva el movimiento de Iteración 1 y el avión comercial de Iteración 2. La versión vigente completa el recorrido internacional, aumenta gradualmente la dificultad y finaliza con un aterrizaje exitoso y la tortuga llegando a su destino en menos de 90 segundos.
+El proyecto conserva el movimiento de Iteración 1, el avión comercial de Iteración 2 y el recorrido de Iteración 3. La versión vigente se presenta como **Escuela de Aviación**, incorpora una portada propia con la capitana y su gata, mejora la legibilidad de la cabina y la tortuga, y mantiene el aterrizaje exitoso en menos de 90 segundos.
 
-**ITERACIÓN 3: COMPLETADA**
+**ITERACIÓN 4A: COMPLETADA**
