@@ -93,7 +93,8 @@ D:\HTML\Escuela de aviación\
 ## 6. Responsabilidad de archivos
 
 - **`index.html`:** documento principal; portada ilustrada, Canvas, menú, HUD, pausa, final, mensajes y controles. Incluye favicon transparente embebido para evitar un 404 de consola.
-- **`styles.css`:** identidad visual de bienvenida, ilustraciones ligeras de la piloto y la gata, layout responsive y visibilidad táctil mediante `(pointer: coarse)` o ancho máximo de 760 px.
+- **`styles.css`:** identidad visual de bienvenida, encuadre responsive de la ilustración y visibilidad táctil mediante `(pointer: coarse)` o ancho máximo de 760 px.
+- **`assets/images/welcome-pilot-cat.webp`:** ilustración transparente de la capitana y la gata, optimizada a aproximadamente 205 KB.
 - **`game.js`:** fuente principal con configuración, clases, física, cámara, render y API.
 - **`public/game.js`:** copia generada de `game.js` usada por Vite/Sites; no se edita manualmente.
 - **`standalone.html`:** entregable autocontenido generado.
@@ -457,8 +458,8 @@ El nombre mostrado al usuario cambió a **Escuela de Aviación** en el título H
 
 La pantalla inicial ahora usa una composición nocturna de dos columnas que se reorganiza en vertical en pantallas pequeñas. Incluye:
 
-- una capitana comercial ilustrada con HTML y CSS, cabello negro lacio, gorra, blazer, camisa clara y detalle dorado;
-- una gata negra de ojos amarillos y manchas doradas sutiles, presente solo en la bienvenida;
+- una capitana comercial ilustrada en WebP transparente, con rostro proporcionado, cabello negro lacio, gorra, blazer, camisa clara, corbata teal y detalles dorados;
+- una gata negra de anatomía natural, ojos amarillos, volumen de pelaje y manchas doradas sutiles, presente solo en la bienvenida;
 - título, texto breve, botón **Comenzar vuelo**, controles y opción de movimiento reducido;
 - tarjeta social `public/og.png` alineada con la nueva marca.
 
@@ -466,6 +467,7 @@ La pantalla inicial ahora usa una composición nocturna de dos columnas que se r
 
 - La escala visual usa `clamp(viewWidth / 480, 0.9, 1.08)`, un aumento moderado que no modifica la física.
 - El cockpit es más amplio y luminoso; la capitana conserva gorra, cabello negro lacio y uniforme de la portada en una versión simplificada para Canvas.
+- La versión de cockpit incorpora piel con degradado, corbata teal, pasador y emblema dorados, brillo ocular y reflejo suave en el cabello para mantener coherencia con la ilustración refinada.
 - Las ventanas son más grandes, tienen profundidad mediante un degradado cálido y un contorno de mayor contraste.
 - La ventana de la tortuga mide 15 × 12,5 unidades y su personaje recibió caparazón, cabeza y ojo más legibles.
 - La hitbox sigue centrada en el fuselaje con radio 26; no creció con la silueta visual.

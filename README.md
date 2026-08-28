@@ -24,7 +24,8 @@ El proyecto también incluye herramientas opcionales de desarrollo. Si ya tienes
 ## Estructura
 
 - `index.html`: portada ilustrada, interfaz, menús, HUD y controles táctiles.
-- `styles.css`: identidad visual, personajes CSS de bienvenida y presentación responsive.
+- `styles.css`: identidad visual, encuadre responsive de la bienvenida y presentación general.
+- `assets/images/welcome-pilot-cat.webp`: ilustración transparente y optimizada de la capitana y su gata.
 - `game.js`: motor, vuelo, cámara, mundo procedural, obstáculos, colisiones y render Canvas.
 - `standalone.html`: copia autocontenida generada desde los tres archivos anteriores.
 - `assets/`: carpetas preparadas para imágenes, sprites, audio y fuentes futuras.

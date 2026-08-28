@@ -659,18 +659,24 @@
       // Versión simplificada de la capitana de portada: cabello negro lacio,
       // gorra y uniforme comercial legibles incluso a escala de juego.
       ctx.fillStyle="#0b1522";ctx.beginPath();ctx.roundRect(62.5,-14,10.5,13.8,3.8);ctx.fill();
-      ctx.fillStyle="#c9836f";ctx.beginPath();ctx.ellipse(69,-9,4.15,4.9,-.06,0,Math.PI*2);ctx.fill();
+      const pilotSkin=ctx.createLinearGradient(65,-13,73,-5);
+      pilotSkin.addColorStop(0,"#e7a188");pilotSkin.addColorStop(1,"#b96f60");
+      ctx.fillStyle=pilotSkin;ctx.beginPath();ctx.ellipse(69,-9,4.15,4.9,-.06,0,Math.PI*2);ctx.fill();
       ctx.fillStyle="#0b1522";ctx.beginPath();ctx.arc(67.1,-10.8,3.2,Math.PI,Math.PI*2);ctx.lineTo(64,-4.4);ctx.quadraticCurveTo(66,-5.2,67,-7);ctx.closePath();ctx.fill();
       ctx.beginPath();ctx.moveTo(72,-12.6);ctx.quadraticCurveTo(74,-8,72.4,-3.7);ctx.lineTo(70.7,-4.4);ctx.lineTo(70.8,-12.7);ctx.closePath();ctx.fill();
 
       ctx.fillStyle="#17283c";ctx.beginPath();ctx.moveTo(61.5,-3.8);ctx.quadraticCurveTo(69,-6,76.5,-3.5);ctx.lineTo(80,3);ctx.lineTo(59,3);ctx.closePath();ctx.fill();
       ctx.fillStyle="#f4f7f5";ctx.beginPath();ctx.moveTo(65,-4.2);ctx.lineTo(69,-.2);ctx.lineTo(69.2,-4.8);ctx.fill();
       ctx.beginPath();ctx.moveTo(69.2,-4.8);ctx.lineTo(69,-.2);ctx.lineTo(73.1,-4.1);ctx.fill();
-      ctx.fillStyle="#d6ad55";ctx.beginPath();ctx.moveTo(68.5,-3.9);ctx.lineTo(70,-3.9);ctx.lineTo(70.5,.6);ctx.lineTo(69.2,2);ctx.lineTo(68.2,.5);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#2a9ca2";ctx.beginPath();ctx.moveTo(68.5,-3.9);ctx.lineTo(70,-3.9);ctx.lineTo(70.5,.6);ctx.lineTo(69.2,2);ctx.lineTo(68.2,.5);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#d6ad55";ctx.fillRect(68.35,-.45,2.1,.45);
       ctx.fillStyle="#183149";ctx.beginPath();ctx.moveTo(62,-15.3);ctx.quadraticCurveTo(68.5,-17.4,75,-15.1);ctx.lineTo(75.8,-12.5);ctx.lineTo(61.3,-12.5);ctx.closePath();ctx.fill();
       ctx.fillStyle="#d6ad55";ctx.fillRect(62.2,-13.1,12.7,.8);
       ctx.beginPath();ctx.ellipse(68.6,-14.4,1.1,.7,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#d6ad55";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(66.3,-14.4);ctx.lineTo(67.7,-14.4);ctx.moveTo(69.5,-14.4);ctx.lineTo(71,-14.4);ctx.stroke();
       ctx.fillStyle="#23313a";ctx.beginPath();ctx.arc(70.5,-9.2,.42,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.88)";ctx.beginPath();ctx.arc(70.65,-9.35,.13,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="rgba(255,255,255,.16)";ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(64,-12.1);ctx.quadraticCurveTo(66,-13.8,68,-13.2);ctx.stroke();
       ctx.strokeStyle="rgba(88,46,44,.7)";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(69.5,-6.8);ctx.quadraticCurveTo(70.5,-6.2,71.4,-6.8);ctx.stroke();
       ctx.strokeStyle="#c9836f";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(75,-2.8);ctx.lineTo(82,-.3);ctx.stroke();
       ctx.restore();
