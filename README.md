@@ -1,6 +1,6 @@
 # Escuela de Aviación
 
-Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una capitana recorre el mundo de noche con una tortuga como pasajera y aterriza en un aeropuerto iluminado. La bienvenida presenta a la piloto junto a su elegante gata negra.
+Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una capitana recorre el mundo de noche con una tortuga como pasajera; tras aterrizar, la tortuga continúa hacia un centro espacial y completa la misión en la Luna. El menú principal es un hangar ilustrado game-art con la piloto y su elegante gata negra.
 
 ## Abrir el juego
 
@@ -23,10 +23,10 @@ El proyecto también incluye herramientas opcionales de desarrollo. Si ya tienes
 
 ## Estructura
 
-- `index.html`: portada ilustrada, interfaz, menús, HUD y controles táctiles.
-- `styles.css`: identidad visual, encuadre responsive de la bienvenida y presentación general.
-- `assets/images/welcome-pilot-cat.webp`: ilustración transparente y optimizada de la capitana y su gata.
-- `game.js`: motor, vuelo, cámara, mundo procedural, obstáculos, colisiones y render Canvas.
+- `index.html`: menú principal integrado en el hangar, paneles funcionales, HUD de combustible/vidas y controles táctiles.
+- `styles.css`: identidad game-art, carteles físicos, modales de mantenimiento, responsive y presentación general.
+- `assets/images/menu-hangar-game-art.png`: escenario original del menú B con hangar, avión, capitana y gata.
+- `game.js`: motor, vuelo, cámara, mundo procedural, obstáculos, pickups, colisiones y secuencia aeropuerto–Luna.
 - `standalone.html`: copia autocontenida generada desde los tres archivos anteriores.
 - `assets/`: carpetas preparadas para imágenes, sprites, audio y fuentes futuras.
 - `scripts/build-standalone.mjs`: regenera `standalone.html`.
@@ -43,22 +43,35 @@ Edita `GAME_TEXT` al principio de `game.js`. Ahí están el título conceptual y
 
 En `CONFIG`, al principio de `game.js`:
 
-- `finalDistance`: longitud total del viaje; un valor mayor alarga la partida.
+- `finalDistance`: longitud total del viaje aéreo; actualmente `12600` para mantener la misión completa por debajo de 90 s.
 - `approachAt`: porcentaje en el que comienza la aproximación al aeropuerto.
 - `cruiseSpeed`: velocidad base.
 - `routeSpeedBoost`: incremento gradual de velocidad durante el recorrido.
-- `arrivalDurations`: duración de aproximación, aterrizaje, taxi y desembarque.
+- `arrivalDurations`: duración de aproximación, aterrizaje, taxi, desembarque, traslado, lanzamiento y escena lunar.
 - `collisionFuelLoss`: combustible perdido en una colisión.
 
 El consumo normal se ajusta dentro de `Player.update()`. El combustible no se fuerza a cero al final: una partida limpia llega con reserva y las colisiones siguen restando combustible.
 
+La misión completa fue cronometrada en **86,092 s de tiempo de juego**, desde Comenzar vuelo hasta la pantalla lunar final.
+
 ### Dificultad y obstáculos
 
-- `getDifficulty(progress)` centraliza velocidad propia, separación y amplitud de movimiento.
+- `getDifficulty(progress)` centraliza velocidad propia, separación, amplitud, intensidad visual y probabilidad de parejas.
 - `CONFIG.obstacleGap`, `obstacleSpeed` y `obstacleAmplitude` definen sus rangos.
 - `ObstacleManager.chooseType()` decide qué aparece en cada capa de altura.
 - `ObstacleManager.update()` controla progresión, trayectorias, generación adelantada, reciclaje y colisiones.
 - `OBSTACLE_INFO` contiene los radios de colisión; son deliberadamente menores que el dibujo visual.
+
+### Vidas y pickups
+
+- El vuelo comienza con 3 vidas y admite un máximo de 5.
+- Cada choque consume una vida disponible y mantiene la penalización de combustible.
+- `PickupManager` distribuye escudos de vida extra a lo largo de la ruta.
+- La aproximación elimina obstáculos y pickups para conservar un aterrizaje limpio.
+
+### Secuencia final
+
+La máquina de estados continúa después de `ARRIVED`: `TRANSFER` lleva a la tortuga al centro espacial, `LAUNCH` anima el despegue del cohete y `MOON` completa el alunizaje antes de mostrar **Misión completada**.
 
 ### Landmarks
 
@@ -102,4 +115,4 @@ node scripts/build-standalone.mjs
 
 El archivo generado funciona abriéndolo directamente y no consulta recursos externos.
 
-Para revisar rápidamente la aproximación, aterrizaje, taxi y desembarque durante desarrollo, añade `?preview=ending` a la URL y pulsa **Comenzar vuelo**. Este modo no modifica la partida normal.
+Vistas de prueba disponibles: `?preview=ending`, `?preview=obstacles`, `?preview=pickups`, `?preview=rocket` y `?preview=moon`. Solo aceleran la revisión visual y no modifican la partida normal.

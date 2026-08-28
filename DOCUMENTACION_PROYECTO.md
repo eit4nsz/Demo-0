@@ -16,23 +16,24 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 
 | Área | Estado |
 |---|---|
-| Portada, menú e inicio | Rediseñados y validados en Iteración 4A |
+| Portada, menú e inicio | Menú game-art de hangar con cuatro opciones y paneles funcionales |
 | Bucle con `requestAnimationFrame` | Implementado |
 | Movimiento WASD y flechas | Corregido y validado en Iteración 1 |
 | Movimiento táctil | Implementado; emulación móvil validada |
 | Libertad horizontal y vertical visible | Implementada y validada |
 | Cámara y conversión mundo/pantalla | Corregida en Iteración 1 |
 | Límites, diagonales e inercia | Implementados y validados |
-| Obstáculos y colisiones | Preservados y probados |
+| Obstáculos y colisiones | Overhaul visual, mayor densidad, variedad y dificultad progresiva |
 | Combustible e invulnerabilidad | Preservados y probados |
 | Pausa, reanudación y reinicio | Implementados y probados |
-| Escenarios, landmarks, aeropuerto y llegada | Implementados |
+| Escenarios, landmarks, aeropuerto y llegada | Implementados; viaje extendido hasta centro espacial y Luna |
 | Avión comercial, piloto y tortuga pasajera | Implementados en Iteración 2; legibilidad mejorada en Iteración 4A |
-| Gata negra de la portada | Implementada en Iteración 4A; no forma parte del gameplay |
+| Gata negra del menú | Integrada en la escena game-art del hangar; no forma parte del gameplay |
+| Vidas extra y pickups | 3 vidas iniciales, máximo 5 y escudos coleccionables |
 | Dificultad progresiva | Implementada en Iteración 3 |
-| Duración total | 84,864 s; validada en Iteración 3 |
+| Duración total | 86,092 s hasta la pantalla lunar final |
 | Responsive | Validado en tres resoluciones objetivo |
-| Consola | 0 errores después de Iteración 4A |
+| Consola | 0 errores después de la actualización game-art |
 | Build y versión autocontenida | Implementados y validados |
 
 ## 3. Tecnologías y lenguajes
@@ -60,7 +61,7 @@ Lenguajes presentes: HTML, CSS, JavaScript, JSON y Markdown. No se usan React, V
 - **`devicePixelRatio`:** nitidez limitada a DPR 2 para controlar coste.
 - **Page Visibility API:** pausa automática al ocultar el documento.
 - **`matchMedia`:** consulta `prefers-reduced-motion`.
-- **`URLSearchParams`:** vista previa del final con `?preview=ending`.
+- **`URLSearchParams`:** vistas de prueba `ending`, `obstacles`, `pickups`, `rocket` y `moon`.
 - **DOM API:** HUD, overlays, mensajes, regiones y accesibilidad.
 
 ## 5. Estructura
@@ -92,9 +93,9 @@ D:\HTML\Escuela de aviación\
 
 ## 6. Responsabilidad de archivos
 
-- **`index.html`:** documento principal; portada ilustrada, Canvas, menú, HUD, pausa, final, mensajes y controles. Incluye favicon transparente embebido para evitar un 404 de consola.
-- **`styles.css`:** identidad visual de bienvenida, encuadre responsive de la ilustración y visibilidad táctil mediante `(pointer: coarse)` o ancho máximo de 760 px.
-- **`assets/images/welcome-pilot-cat.webp`:** ilustración transparente de la capitana y la gata, optimizada a aproximadamente 205 KB.
+- **`index.html`:** documento principal; escenario-menú, paneles Cómo jugar/Ajustes/Créditos, Canvas, HUD de vidas y combustible, pausa, final, mensajes y controles.
+- **`styles.css`:** identidad game-art, logo volumétrico, carteles físicos, paneles de mantenimiento, responsive y visibilidad táctil.
+- **`assets/images/menu-hangar-game-art.png`:** ilustración original 16:9 del menú B con hangar nocturno, avión, capitana y gata.
 - **`game.js`:** fuente principal con configuración, clases, física, cámara, render y API.
 - **`public/game.js`:** copia generada de `game.js` usada por Vite/Sites; no se edita manualmente.
 - **`standalone.html`:** entregable autocontenido generado.
@@ -117,9 +118,10 @@ D:\HTML\Escuela de aviación\
 - **`InputManager`:** unifica WASD, flechas y táctil; no contiene física ni render.
 - **`Player`:** posición, velocidad, aceleración, drag, rotación, combustible, colisiones, invulnerabilidad y estado visual de tren/puerta/tortuga.
 - **`Camera`:** avance del mundo, seguimiento vertical lento y shake.
-- **`ObstacleManager`:** generación por etapas, velocidad propia, trayectorias, limpieza y colisión mundial.
+- **`ObstacleManager`:** generación por etapas, velocidad propia, parejas espaciadas, control de repetición, trayectorias, limpieza y colisión mundial.
+- **`PickupManager`:** distribución determinista, movimiento, colisión y recogida de escudos de vida extra.
 - **`ParticleSystem`:** partículas livianas de impacto y motor.
-- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno, atmósfera, landmarks y aeropuerto nocturno.
+- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno multicapa, landmarks, aeropuerto, centro espacial y superficie lunar.
 - **`PlaneRenderer`:** dibuja un avión comercial original con motores, ventanas iluminadas, cockpit ampliado, piloto, tortuga pasajera, tren y puerta; representa el estado sin controlar la física.
 - **`UIManager`:** HUD, mensajes, regiones y overlays.
 - **`Game`:** ciclo de vida, estados, límites, progresión, render y coordinación.
@@ -135,12 +137,18 @@ MENU → PLAYING ⇄ PAUSED
           ↓
           TAXI
           ↓
-        ARRIVED
+       ARRIVED
+          ↓
+       TRANSFER
+          ↓
+        LAUNCH
+          ↓
+          MOON
           ↓
  PLAYING (Volver a volar)
 ```
 
-`PAUSED` conserva la fase desde la que se pausó y la restaura sin saltos. Cuando `ARRIVED` termina el desembarque, la física queda detenida y aparece el final exitoso.
+`PAUSED` conserva cualquier fase activa y la restaura sin saltos. `ARRIVED` termina el desembarque, `TRANSFER` lleva a la tortuga al centro espacial, `LAUNCH` anima el cohete y `MOON` muestra el alunizaje antes del final exitoso.
 
 ## 9. Modelo de movimiento
 
@@ -189,12 +197,13 @@ render y colisiones alineadas
 ## 11. Sistemas preservados
 
 - Siete tipos de obstáculos con dificultad escalada por `progress`.
+- Tres vidas iniciales, máximo cinco y pickups de vida extra.
 - Penalización de 11 puntos de combustible por impacto.
 - Invulnerabilidad temporal de 1.8 segundos.
 - Shake, partículas y mensaje de colisión.
 - Consumo continuo de combustible.
 - Progresión y landmarks.
-- Aproximación, aterrizaje, taxi, estacionamiento y desembarque.
+- Aproximación, aterrizaje, taxi, estacionamiento, desembarque, traslado, lanzamiento y alunizaje.
 - Combustible restante al completar una partida normal; no se fuerza a cero.
 - Preferencia de reducir movimiento.
 
@@ -456,12 +465,14 @@ La tortuga desaparece de su ventana al comenzar el desembarque, baja la escalera
 
 El nombre mostrado al usuario cambió a **Escuela de Aviación** en el título HTML, metadata social, encabezado principal y textos configurables. Los nombres de la API `HastaLaLuna` se conservaron para no romper integraciones existentes.
 
-La pantalla inicial ahora usa una composición nocturna de dos columnas que se reorganiza en vertical en pantallas pequeñas. Incluye:
+La pantalla inicial usa la dirección B **Hangar abierto**. El escenario completo funciona como interfaz: una ilustración game-art nocturna reúne avión comercial, pista, torre, capitana y gata; el título recibe volumen, contorno y emblemas aeronáuticos; las opciones son carteles físicos suspendidos en el hangar. Incluye:
 
-- una capitana comercial ilustrada en WebP transparente, con rostro proporcionado, cabello negro lacio, gorra, blazer, camisa clara, corbata teal y detalles dorados;
-- una gata negra de anatomía natural, ojos amarillos, volumen de pelaje y manchas doradas sutiles, presente solo en la bienvenida;
-- título, texto breve, botón **Comenzar vuelo**, controles y opción de movimiento reducido;
-- tarjeta social `public/og.png` alineada con la nueva marca.
+- **Comenzar vuelo** como señal principal dominante;
+- **Cómo jugar**, **Ajustes** y **Créditos** como señalización secundaria;
+- paneles de mantenimiento accesibles, cerrables con `Escape` y navegables por teclado;
+- control funcional de movimiento reducido y control de sonido preparado;
+- campos editables de créditos para completar manualmente;
+- adaptación móvil que reorganiza los carteles sin convertirlos en tarjetas web.
 
 ### Avión, cockpit y pasajeros
 
@@ -484,12 +495,88 @@ La pantalla inicial ahora usa una composición nocturna de dos columnas que se r
 - [x] Consola con 0 errores y 0 advertencias relevantes.
 - [x] `npm run build` completado y `standalone.html` regenerado.
 
-## 21. Pendiente conocido
+## 21. Actualización game-art — fases 1 a 5
+
+### Fase 1 — Menú principal
+
+- Dirección B implementada con `assets/images/menu-hangar-game-art.png`.
+- Escenario asimétrico con foreground, midground y background.
+- Logo de videojuego integrado en la escena.
+- Hover, foco, pulsación, teclado y modales funcionales.
+- Créditos listos para edición manual, sin contenido definitivo inventado.
+
+### Fase 2 — Overhaul visual del gameplay
+
+- Cielo con mayor contraste, brillos atmosféricos y transición espacial.
+- Tres capas de terreno con parallax independiente.
+- Ciudad con ventanas cálidas y luces de horizonte animadas.
+- Landmarks con paletas propias, contornos y acentos luminosos.
+- Avión con doble franja, emblema original, bordes, reflejos y turbinas visibles.
+
+### Fase 3 — Obstáculos y dificultad
+
+Valores actuales:
+
+| Parámetro | Antes | Actual |
+|---|---:|---:|
+| `CONFIG.obstacleGap` | 540 → 1250 | 365 → 980 |
+| `CONFIG.obstacleSpeed` | 18 → 132 | 38 → 172 |
+| `CONFIG.obstacleAmplitude` | 12 → 88 | 16 → 108 |
+
+`getDifficulty(progress)` también calcula `pairChance` e `visualIntensity`. Desde 34 % puede formar parejas separadas vertical y horizontalmente; nunca usa más de dos elementos por combinación y deja limpia la aproximación desde 90 %. `ObstacleManager.selectType()` evita rachas visuales de un mismo tipo. Pájaros, globos, tormentas, meteoritos y satélites recibieron siluetas, volumen y detalles propios.
+
+### Fase 4 — Vidas extra
+
+- `CONFIG.startingLives = 3` y `CONFIG.maxLives = 5`.
+- Una colisión consume una vida, mantiene 11 puntos de daño de combustible y respeta 1,8 s de invulnerabilidad.
+- `PickupManager` crea escudos luminosos `+1` con semilla determinista.
+- El HUD representa las cinco ranuras mediante corazones llenos y vacíos.
+- Si la reserva está completa, el pickup no se consume.
+
+### Fase 5 — Aeropuerto, centro espacial, cohete y Luna
+
+La ruta final es:
+
+```text
+APPROACH → LANDING → TAXI → ARRIVED
+                              ↓
+                          TRANSFER
+                              ↓
+                           LAUNCH
+                              ↓
+                             MOON
+```
+
+- `ARRIVED`: puerta, escalera y desembarque.
+- `TRANSFER`: transporte terrestre desde el avión hasta el centro espacial.
+- `LAUNCH`: cohete original con la tortuga visible en la ventanilla, llama y ascenso gradual.
+- `MOON`: superficie lunar, Tierra al fondo, cohete posado y paseo final de la tortuga.
+- Texto final centralizado en `GAME_TEXT`: **Misión completada** / **La tortuga llegó a la Luna**.
+- `prefers-reduced-motion` y el ajuste manual eliminan rebotes, estelas accesorias y pulsaciones fuertes.
+
+Para conservar el máximo de 90 s, `finalDistance` pasó de `14800` a `12600` y las fases usan `3,2 + 4 + 3,2 + 4,2 + 4,5 + 5,5 + 4` segundos. La ejecución completa finalizó en **86,092 s de tiempo de juego**.
+
+### Validación de la actualización
+
+- [x] Menú y tres paneles funcionales.
+- [x] Movimiento, cámara y avión comercial preservados.
+- [x] Obstáculos más numerosos, variados y progresivos.
+- [x] Pickup visible, recogida 2 → 3 vidas y mensaje de confirmación.
+- [x] Colisión 3 → 2 vidas, combustible 100 % → 87 % en la ventana probada e invulnerabilidad activa.
+- [x] Partida completa hasta `MOON`: 86,092 s.
+- [x] Todos los landmarks permanecen antes de `APPROACH`.
+- [x] Centro espacial, lanzamiento, alunizaje y pantalla final.
+- [x] Responsive en `390×844`, `1366×768` y `1920×1080`.
+- [x] Movimiento reducido en la secuencia espacial.
+- [x] Consola sin errores ni advertencias relevantes.
+- [x] `npm run build` y `standalone.html` actualizados.
+
+## 22. Pendiente conocido
 
 - Validación adicional en un dispositivo táctil físico; la emulación `390×844` pasó.
 
-## 22. Estado
+## 23. Estado
 
-El proyecto conserva el movimiento de Iteración 1, el avión comercial de Iteración 2 y el recorrido de Iteración 3. La versión vigente se presenta como **Escuela de Aviación**, incorpora una portada propia con la capitana y su gata, mejora la legibilidad de la cabina y la tortuga, y mantiene el aterrizaje exitoso en menos de 90 segundos.
+El proyecto conserva el movimiento de Iteración 1 y el avión comercial de Iteración 2. La versión vigente se presenta como **Escuela de Aviación**, usa un menú game-art integrado en un hangar, amplía el detalle y profundidad del mundo, incorpora obstáculos progresivos y vidas extra, y concluye la ruta aeropuerto–centro espacial–Luna en 86,092 segundos.
 
-**ITERACIÓN 4A: COMPLETADA**
+**ACTUALIZACIÓN GAME-ART — FASES 1 A 5: COMPLETADA**
