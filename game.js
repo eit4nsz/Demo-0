@@ -782,11 +782,73 @@
       this.root.querySelector("#resume-button").addEventListener("click", () => this.togglePause());
       this.root.querySelector("#pause-button").addEventListener("click", () => this.togglePause());
       this.root.querySelector("#restart-button").addEventListener("click", () => this.reset(true));
-      this.root.querySelector("#reduce-motion").addEventListener("change", event => { this.reducedMotion = event.target.checked; });
+      const reduceMotion = this.root.querySelector("#reduce-motion");
+      reduceMotion.checked = this.reducedMotion;
+      reduceMotion.addEventListener("change", event => {
+        this.reducedMotion = event.target.checked;
+        this.root.classList.toggle("menu-reduce-motion", this.reducedMotion);
+      });
+      this.bindMenuPanel();
       this.input.onPause = () => this.togglePause();
       this.input.onRestart = () => { if (this.state === "ARRIVED" && this.finalShown) this.reset(true); };
       this.boundVisibility = () => { if (document.hidden && this.isActiveFlightState()) this.togglePause(); };
       document.addEventListener("visibilitychange", this.boundVisibility);
+    }
+
+    bindMenuPanel() {
+      const panel = this.root.querySelector("#menu-panel");
+      const board = panel.querySelector(".maintenance-board");
+      const closeButton = panel.querySelector(".menu-panel__close");
+      const panelButtons = [...this.root.querySelectorAll("[data-menu-panel]")];
+      const menuButtons = [this.root.querySelector("#start-button"), ...panelButtons];
+      const views = [...panel.querySelectorAll("[data-menu-view]")];
+      const soundRange = panel.querySelector("#sound-range");
+      const soundStatus = panel.querySelector("#sound-status");
+      let opener = null;
+
+      const clearSelection = () => panelButtons.forEach(button => button.setAttribute("aria-pressed", "false"));
+      this.closeMenuPanel = (restoreFocus = true) => {
+        if (!panel.open) return;
+        panel.close();
+        clearSelection();
+        if (restoreFocus) opener?.focus();
+        opener = null;
+      };
+
+      const openPanel = (name, button) => {
+        views.forEach(view => { view.hidden = view.dataset.menuView !== name; });
+        clearSelection();
+        button.setAttribute("aria-pressed", "true");
+        panel.setAttribute("aria-labelledby", `menu-${name}-title`);
+        opener = button;
+        panel.showModal();
+        closeButton.focus();
+      };
+
+      panelButtons.forEach(button => button.addEventListener("click", () => openPanel(button.dataset.menuPanel, button)));
+      closeButton.addEventListener("click", () => this.closeMenuPanel());
+      panel.addEventListener("cancel", event => { event.preventDefault(); this.closeMenuPanel(); });
+      panel.addEventListener("click", event => {
+        const bounds = board.getBoundingClientRect();
+        const outside = event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+        if (outside) this.closeMenuPanel();
+      });
+
+      this.root.querySelector(".world-menu").addEventListener("keydown", event => {
+        const current = menuButtons.indexOf(document.activeElement);
+        if (current < 0) return;
+        let next = current;
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") next = (current + 1) % menuButtons.length;
+        else if (event.key === "ArrowUp" || event.key === "ArrowLeft") next = (current - 1 + menuButtons.length) % menuButtons.length;
+        else if (event.key === "Home") next = 0;
+        else if (event.key === "End") next = menuButtons.length - 1;
+        else return;
+        event.preventDefault();
+        menuButtons[next].focus();
+      });
+
+      soundRange.addEventListener("input", () => { soundStatus.textContent = `Preparado · ${soundRange.value}%`; });
+      this.root.classList.toggle("menu-reduce-motion", this.reducedMotion);
     }
 
     resize() {
@@ -812,6 +874,7 @@
     }
 
     start() {
+      this.closeMenuPanel?.(false);
       if (this.state === "MENU") this.reset(false);
       this.state = "PLAYING";
       this.ui.enterGame();

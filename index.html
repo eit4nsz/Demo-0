@@ -22,27 +22,91 @@
   <main id="turtle-flight-game" class="game-shell" aria-label="Escuela de Aviación, minijuego de vuelo">
     <canvas id="game-canvas" aria-label="Escena del vuelo internacional y llegada de la tortuga al aeropuerto"></canvas>
 
-    <section id="start-screen" class="screen screen--visible" aria-labelledby="game-title">
-      <div class="welcome-card">
-        <div class="welcome-copy">
-          <p class="eyebrow">Bitácora de vuelo · Edición nocturna</p>
-          <h1 id="game-title" class="welcome-title"><span>Escuela</span> de Aviación</h1>
-          <p class="subtitle">Un vuelo alrededor del mundo, una pasajera muy especial y una gata que siempre espera el regreso.</p>
-          <button id="start-button" class="primary-button" type="button">Comenzar vuelo <span aria-hidden="true">→</span></button>
-          <div class="controls-hint" aria-label="Controles">
-            <span><kbd>WASD</kbd> / <kbd>Flechas</kbd> Volar</span>
-            <span><kbd>P</kbd> / <kbd>ESC</kbd> Pausa</span>
-          </div>
-          <label class="motion-option"><input id="reduce-motion" type="checkbox"> Reducir movimiento</label>
-        </div>
-        <div class="welcome-portrait">
-          <i class="portrait-orbit portrait-orbit--one" aria-hidden="true"></i>
-          <i class="portrait-orbit portrait-orbit--two" aria-hidden="true"></i>
-          <img class="welcome-character-art" src="assets/images/welcome-pilot-cat.webp" width="1024" height="1536" fetchpriority="high" decoding="async" alt="Capitana comercial de cabello negro junto a su gata negra de ojos amarillos y manchas doradas">
-          <p class="portrait-caption"><span>Capitana</span><strong>Lista para despegar</strong></p>
-        </div>
+    <section id="start-screen" class="screen screen--visible start-menu-screen" aria-labelledby="game-title">
+      <div class="menu-world">
+        <img class="menu-world__art" src="assets/images/menu-hangar-game-art.png" width="1672" height="941" fetchpriority="high" decoding="async" alt="Hangar nocturno ilustrado con avión comercial, piloto y gata negra">
+        <div class="menu-world__atmosphere" aria-hidden="true"></div>
+
+        <h1 class="game-logo">
+          <span class="game-logo__kicker">Escuela de</span>
+          <span id="game-title" class="game-logo__main"><i aria-hidden="true"></i>Aviación<i aria-hidden="true"></i></span>
+          <span class="game-logo__sub">Base de operaciones nocturnas</span>
+        </h1>
+
+        <nav class="world-menu" aria-label="Menú principal">
+          <button id="start-button" class="world-menu__option world-menu__option--start" type="button">Comenzar <small>vuelo</small></button>
+          <button id="menu-how-button" class="world-menu__option world-menu__option--secondary" type="button" data-menu-panel="how" aria-haspopup="dialog" aria-pressed="false">Cómo jugar</button>
+          <button id="menu-settings-button" class="world-menu__option world-menu__option--secondary" type="button" data-menu-panel="settings" aria-haspopup="dialog" aria-pressed="false">Ajustes</button>
+          <button id="menu-credits-button" class="world-menu__option world-menu__option--secondary" type="button" data-menu-panel="credits" aria-haspopup="dialog" aria-pressed="false">Créditos</button>
+        </nav>
+
+        <p class="world-menu__hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> elegir <kbd>Enter</kbd> confirmar</p>
       </div>
     </section>
+
+    <dialog id="menu-panel" class="menu-panel" aria-labelledby="menu-how-title">
+      <section class="maintenance-board">
+        <button class="menu-panel__close" type="button" aria-label="Cerrar panel">×</button>
+
+        <div class="menu-panel__view" data-menu-view="how" hidden>
+          <p class="menu-panel__kicker">Manual de cabina</p>
+          <h2 id="menu-how-title">Cómo jugar</h2>
+          <div class="instruction-grid">
+            <article class="instruction-item">
+              <strong>Control de vuelo</strong>
+              <div class="instruction-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span> o </span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+              <p>Mueve el avión y mantén una trayectoria segura.</p>
+            </article>
+            <article class="instruction-item">
+              <strong>Pausa</strong>
+              <div class="instruction-keys"><kbd>Esc</kbd><span> / </span><kbd>P</kbd></div>
+              <p>Detén el viaje cuando necesites revisar la ruta.</p>
+            </article>
+            <article class="instruction-item">
+              <strong>Vidas</strong>
+              <p>Recoge vidas extra durante el recorrido para proteger el vuelo.</p>
+            </article>
+            <article class="instruction-item">
+              <strong>Objetivo</strong>
+              <p>Esquiva obstáculos y completa el viaje hasta el destino.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="menu-panel__view" data-menu-view="settings" hidden>
+          <p class="menu-panel__kicker">Tablero de mantenimiento</p>
+          <h2 id="menu-settings-title">Ajustes</h2>
+          <div class="setting-row">
+            <div class="setting-copy"><strong>Reducir movimiento</strong><span>Detiene desplazamientos y destellos ambientales.</span></div>
+            <label class="hangar-switch">
+              <input id="reduce-motion" type="checkbox">
+              <span class="hangar-switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Reducir movimiento</span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-copy"><strong>Sonido</strong><span>Control preparado para conectarse al sistema de audio.</span></div>
+            <output id="sound-status" class="sound-status" for="sound-range">Preparado · 70%</output>
+            <div class="sound-control">
+              <input id="sound-range" type="range" min="0" max="100" value="70" aria-label="Volumen de sonido preparado">
+              <span aria-hidden="true">♪</span>
+            </div>
+          </div>
+          <p class="menu-panel__note">El control de sonido queda preparado sin añadir audio nuevo en esta fase.</p>
+        </div>
+
+        <div class="menu-panel__view" data-menu-view="credits" hidden>
+          <p class="menu-panel__kicker">Bitácora de tripulación</p>
+          <h2 id="menu-credits-title">Créditos</h2>
+          <div class="credit-fields">
+            <label>Diseño y desarrollo<input type="text" value="[Nombre por completar]" aria-label="Nombre de diseño y desarrollo"></label>
+            <label>Arte y personajes<input type="text" value="[Nombre por completar]" aria-label="Nombre de arte y personajes"></label>
+            <label>Música y sonido<input type="text" value="[Nombre por completar]" aria-label="Nombre de música y sonido"></label>
+          </div>
+          <p class="menu-panel__note">Puedes reemplazar manualmente estos textos cuando confirmes los créditos finales.</p>
+        </div>
+      </section>
+    </dialog>
 
     <section id="hud" class="hud" aria-label="Datos de vuelo" hidden>
       <div class="hud-group hud-group--stats">
