@@ -113,10 +113,16 @@
         <div><span>ALT</span><strong id="altitude-value">0 m</strong></div>
         <div><span>DIST</span><strong id="distance-value">0 km</strong></div>
       </div>
-      <div class="fuel-card">
-        <div class="fuel-label"><span>COMBUSTIBLE</span><strong id="fuel-value">100%</strong></div>
-        <div class="fuel-track" role="meter" aria-label="Combustible" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
-          <i id="fuel-fill"></i>
+      <div class="hud-vitals">
+        <div class="life-card" aria-label="Vidas disponibles">
+          <span>VIDAS</span>
+          <strong id="lives-value" aria-live="polite">♥ ♥ ♥</strong>
+        </div>
+        <div class="fuel-card">
+          <div class="fuel-label"><span>COMBUSTIBLE</span><strong id="fuel-value">100%</strong></div>
+          <div class="fuel-track" role="meter" aria-label="Combustible" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+            <i id="fuel-fill"></i>
+          </div>
         </div>
       </div>
       <button id="pause-button" class="icon-button" type="button" aria-label="Pausar juego">Ⅱ</button>

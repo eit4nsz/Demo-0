@@ -21,7 +21,10 @@
     obstacleAmplitude: [16, 108],
     approachClearAt: 0.9,
     collisionFuelLoss: 11,
-    invulnerabilitySeconds: 1.8
+    invulnerabilitySeconds: 1.8,
+    startingLives: 3,
+    maxLives: 5,
+    lifePickupGap: [1850, 2450]
   });
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -157,6 +160,7 @@
       this.rotation = -.03;
       this.targetRotation = -.03;
       this.fuel = 100;
+      this.lives = CONFIG.startingLives;
       this.invulnerability = 0;
       this.hitReaction = 0;
       this.blinkTimer = 2.2;
@@ -199,6 +203,12 @@
       this.fuel = Math.max(0, this.fuel - CONFIG.collisionFuelLoss);
       this.velocity.x *= .67;
       this.velocity.y -= 45;
+      this.lives = Math.max(0, this.lives - 1);
+      return true;
+    }
+    collectLife() {
+      if (this.lives >= CONFIG.maxLives) return false;
+      this.lives += 1;
       return true;
     }
   }
@@ -310,6 +320,46 @@
         const radius = OBSTACLE_INFO[item.type].radius + 26;
         if (dx * dx + dy * dy < radius * radius && player.collide()) { onHit(item); break; }
       }
+    }
+  }
+
+  class PickupManager {
+    constructor() { this.reset(); }
+    reset() {
+      this.items = [];
+      this.random = new SeededRandom(7127);
+      this.nextSpawnX = 2150;
+    }
+    update(dt, player, progress, onCollect) {
+      if (progress >= CONFIG.approachClearAt) { this.items.length = 0; return; }
+      while (this.nextSpawnX < player.position.x + 1750) {
+        const altitudeSpread = progress < .28 ? 370 : 690;
+        const y = clamp(player.position.y + this.random.range(-altitudeSpread, altitudeSpread), CONFIG.minAltitude + 110, CONFIG.maxAltitude - 150);
+        this.items.push({
+          x: this.nextSpawnX,
+          y,
+          baseY: y,
+          phase: this.random.range(0, Math.PI * 2),
+          vx: -this.random.range(7, 19),
+          collected: false
+        });
+        this.nextSpawnX += this.random.range(CONFIG.lifePickupGap[0], CONFIG.lifePickupGap[1]);
+      }
+      this.items.forEach(item => {
+        item.x += item.vx * dt;
+        item.phase += dt * 2.2;
+        item.y = item.baseY + Math.sin(item.phase) * 24;
+      });
+      for (const item of this.items) {
+        if (item.collected) continue;
+        const dx = item.x - player.position.x;
+        const dy = (item.y - player.position.y) * .38;
+        if (dx * dx + dy * dy < 44 * 44 && player.collectLife()) {
+          item.collected = true;
+          onCollect(item);
+        }
+      }
+      this.items = this.items.filter(item => !item.collected && item.x > player.position.x - 900);
     }
   }
 
@@ -811,6 +861,7 @@
       this.fuel = root.querySelector("#fuel-value");
       this.fuelFill = root.querySelector("#fuel-fill");
       this.fuelTrack = root.querySelector(".fuel-track");
+      this.lives = root.querySelector("#lives-value");
       this.region = root.querySelector("#region-label");
       this.message = root.querySelector("#flight-message");
       root.querySelector("#ending-line-1").textContent = GAME_TEXT.endingLine1;
@@ -837,6 +888,10 @@
       this.fuelFill.style.width = `${fuel}%`;
       this.fuelFill.style.background = fuel < 20 ? "linear-gradient(90deg,#e46f73,#ffc47d)" : "linear-gradient(90deg,#70e0d4,#fff0a6)";
       this.fuelTrack.setAttribute("aria-valuenow", String(Math.round(fuel)));
+      const hearts = Array.from({ length: CONFIG.maxLives }, (_, index) => index < player.lives ? "♥" : "♡").join(" ");
+      if (this.lives.textContent !== hearts) this.lives.textContent = hearts;
+      this.lives.classList.toggle("is-full", player.lives >= CONFIG.maxLives);
+      this.lives.parentElement.setAttribute("aria-label", `${player.lives} de ${CONFIG.maxLives} vidas disponibles`);
       this.regionTimer -= dt; this.messageTimer -= dt;
       if (this.regionTimer <= 0) this.region.classList.remove("region-label--visible");
       if (this.messageTimer <= 0) this.message.classList.remove("flight-message--visible");
@@ -856,6 +911,7 @@
       this.player = new Player();
       this.camera = new Camera();
       this.obstacles = new ObstacleManager();
+      this.pickups = new PickupManager();
       this.particles = new ParticleSystem();
       this.world = new WorldRenderer();
       this.planeRenderer = new PlaneRenderer();
@@ -1003,6 +1059,17 @@
         if (this.nextLandmark < 0) this.nextLandmark = this.world.landmarks.length;
         this.obstacles.nextSpawnX = this.player.position.x + 520;
         this.ui.announceRegion("Zona de tráfico intenso · 62 %");
+      } else if (preview === "pickups") {
+        this.player.position.x = CONFIG.finalDistance * .34;
+        this.player.position.y = 2600;
+        this.player.lives = 2;
+        this.camera.x = this.player.position.x;
+        this.camera.altitude = this.player.position.y;
+        this.progress = .34;
+        this.obstacles.nextSpawnX = this.player.position.x + 1900;
+        this.pickups.items.push({ x: this.player.position.x + 235, y: this.player.position.y, baseY: this.player.position.y, phase: 0, vx: -12, collected: false });
+        this.pickups.nextSpawnX = this.player.position.x + 2200;
+        this.ui.announceRegion("Prueba de vidas extra");
       }
     }
 
@@ -1011,7 +1078,7 @@
     }
 
     reset(playImmediately = false) {
-      this.player.reset(); this.camera.reset(); this.obstacles.reset(); this.particles.clear(); this.ui.reset();
+      this.player.reset(); this.camera.reset(); this.obstacles.reset(); this.pickups.reset(); this.particles.clear(); this.ui.reset();
       this.progress = 0; this.phaseTimer = 0; this.arrivalTimer = 0; this.arrivalSceneProgress = 0;
       this.arrivalFuel = 100; this.approachStartAltitude = 500; this.touchdownDone = false; this.finalShown = false; this.nextLandmark = 1; this.input.clear();
       this.state = playImmediately ? "PLAYING" : "MENU";
@@ -1039,6 +1106,7 @@
         this.camera.update(dt, this.player, this.progress, true);
         this.constrainPlayerToView();
         this.obstacles.update(dt, this.player, this.progress, () => this.handleCollision());
+        this.pickups.update(dt, this.player, this.progress, item => this.handleLifePickup(item));
         this.updateLandmarks();
         if (this.progress >= CONFIG.approachAt) this.beginApproach();
       } else if (this.state === "APPROACH") {
@@ -1063,13 +1131,22 @@
       this.camera.hit();
       const point = this.getPlayerScreenPosition();
       this.particles.emit(point.x, point.y, { count: 16, color: "255,204,128", speed: 95, life: .75, size: 4 });
-      this.ui.announceMessage("¡Uy! El cielo también tiene baches.", 2.2);
+      this.ui.announceMessage(this.player.lives > 0 ? `Impacto · quedan ${this.player.lives} vidas` : "Sin vidas de reserva · protege el combustible", 2.2);
+    }
+
+    handleLifePickup(item) {
+      const point = this.getPlayerScreenPosition();
+      const x = point.x + (item.x - this.player.position.x);
+      const y = this.view.height * .53 - (item.y - this.camera.altitude) * .38;
+      this.particles.emit(x, y, { count: this.reducedMotion ? 7 : 18, color: "255,205,104", speed: 76, life: .9, size: 4.5, spread: Math.PI * 2 });
+      this.ui.announceMessage(`Vida extra · ${this.player.lives}/${CONFIG.maxLives}`, 2.1);
     }
 
     beginApproach() {
       this.state = "APPROACH"; this.phaseTimer = 0; this.arrivalTimer = 0; this.arrivalFuel = this.player.fuel;
       this.approachStartAltitude = this.player.position.y;
       this.obstacles.items.length = 0;
+      this.pickups.items.length = 0;
       this.ui.announceMessage("Llegando al destino…", 3.2);
     }
 
@@ -1198,7 +1275,10 @@
       const shake = this.camera.offset(this.reducedMotion);
       ctx.save(); ctx.translate(shake.x, shake.y);
       this.world.render(ctx, this.view, this);
-      if (this.state === "PLAYING") this.renderObstacles(ctx);
+      if (this.state === "PLAYING") {
+        this.renderObstacles(ctx);
+        this.renderPickups(ctx);
+      }
       const point = this.state === "MENU" ? { x: w * .24, y: h * .67 + Math.sin(this.time * 1.4) * 5 } : this.getPlayerScreenPosition();
       this.renderSpeedLines(ctx, point);
       const arriving = ["APPROACH", "LANDING", "TAXI", "ARRIVED"].includes(this.state);
@@ -1229,6 +1309,27 @@
         if (x < -140 || x > this.view.width + 140 || y < -140 || y > this.view.height + 140) continue;
         this.drawObstacle(ctx, item, x, y);
       }
+    }
+
+    renderPickups(ctx) {
+      const playerPoint = this.getPlayerScreenPosition();
+      for (const item of this.pickups.items) {
+        const x = playerPoint.x + (item.x - this.player.position.x);
+        const y = this.view.height * .53 - (item.y - this.camera.altitude) * .38;
+        if (x < -90 || x > this.view.width + 90 || y < -90 || y > this.view.height + 90) continue;
+        this.drawLifePickup(ctx, item, x, y);
+      }
+    }
+
+    drawLifePickup(ctx, item, x, y) {
+      const pulse = this.reducedMotion ? 1 : 1 + Math.sin(item.phase * 1.7) * .07;
+      ctx.save();ctx.translate(x,y);ctx.scale(pulse,pulse);
+      const aura=ctx.createRadialGradient(0,0,4,0,0,43);aura.addColorStop(0,"rgba(255,229,139,.58)");aura.addColorStop(.58,"rgba(99,220,212,.18)");aura.addColorStop(1,"rgba(99,220,212,0)");ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,43,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba(17,49,66,.92)";ctx.strokeStyle="#e6b956";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(20,-13);ctx.lineTo(18,12);ctx.quadraticCurveTo(0,31,-18,12);ctx.lineTo(-20,-13);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle="rgba(119,230,224,.78)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(14,-10);ctx.lineTo(12,9);ctx.quadraticCurveTo(0,22,-12,9);ctx.lineTo(-14,-10);ctx.closePath();ctx.stroke();
+      ctx.fillStyle="#ffcd69";ctx.shadowColor="#ffcd69";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(0,13);ctx.bezierCurveTo(-21,-1,-12,-15,0,-7);ctx.bezierCurveTo(12,-15,21,-1,0,13);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fff3bf";ctx.font="800 9px Segoe UI, sans-serif";ctx.textAlign="center";ctx.fillText("+1",0,27);
+      ctx.restore();
     }
 
     drawObstacle(ctx, item, x, y) {
