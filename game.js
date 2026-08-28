@@ -527,7 +527,9 @@
   class PlaneRenderer {
     render(ctx, x, y, player, time, arriving, reducedMotion, viewWidth) {
       const hitFlash = player.hitReaction > 0 && Math.floor(player.hitReaction * 16) % 2 === 0;
-      const scale = clamp(viewWidth / 520, .82, 1);
+      // La silueta crece solo de forma visual: la hitbox de Player permanece
+      // deliberadamente más pequeña para conservar las colisiones justas.
+      const scale = clamp(viewWidth / 480, .9, 1.08);
       const visualPitch = clamp(player.rotation, -.22, .2);
       ctx.save(); ctx.translate(x, y); ctx.rotate(visualPitch); ctx.scale(scale, scale);
       if (player.invulnerability > 0 && Math.floor(player.invulnerability * 12) % 2 === 0) ctx.globalAlpha = .48;
@@ -613,49 +615,67 @@
     }
 
     drawPassengerWindows(ctx, player, time, ending) {
-      const positions=[-48,-35,-22,-9,4,17,30,43];
+      const positions=[-49,-35,-21,-7,7,21,35,47];
       positions.forEach((windowX,index)=>{
         const turtleWindow=index===3;
-        const width=turtleWindow?12:8, height=turtleWindow?10:7;
-        ctx.save();ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,2.5);ctx.clip();
-        ctx.fillStyle=turtleWindow?"#f6cc74":"#e8bd6d";ctx.fillRect(windowX-width/2,-9-height/2,width,height);
-        ctx.fillStyle="rgba(255,244,203,.36)";ctx.fillRect(windowX-width/2,-9-height/2,width,2);
+        const width=turtleWindow?15:9.5, height=turtleWindow?12.5:8;
+        ctx.save();ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,3);ctx.clip();
+        const cabinLight=ctx.createLinearGradient(windowX,-9-height/2,windowX,-9+height/2);
+        cabinLight.addColorStop(0,turtleWindow?"#fff1b9":"#ffe3a0");
+        cabinLight.addColorStop(.45,turtleWindow?"#eebc63":"#dca650");
+        cabinLight.addColorStop(1,"#29485b");
+        ctx.fillStyle=cabinLight;ctx.fillRect(windowX-width/2,-9-height/2,width,height);
+        ctx.fillStyle="rgba(255,255,231,.52)";ctx.fillRect(windowX-width/2+1,-9-height/2+1,width-2,1.6);
         if (turtleWindow && player.turtleExitProgress < .08) this.drawPassengerTurtle(ctx,windowX,-9,player,time,ending);
         ctx.restore();
-        ctx.strokeStyle=turtleWindow?"rgba(255,235,169,.9)":"rgba(57,82,103,.75)";ctx.lineWidth=1;
-        ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,2.5);ctx.stroke();
+        ctx.strokeStyle=turtleWindow?"rgba(255,236,169,.96)":"rgba(45,69,88,.9)";ctx.lineWidth=turtleWindow?1.35:1.1;
+        ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,3);ctx.stroke();
       });
     }
 
     drawPassengerTurtle(ctx, x, y, player, time, ending) {
       const reaction=player.hitReaction>0?Math.sin(time*28)*1.2:0;
-      const lookUp=ending?-1.3:0;
+      const lookUp=ending?-1.1:0;
       ctx.save();ctx.translate(x+reaction,y+Math.sin(time*1.8)*.35);
-      ctx.fillStyle="#5f8f63";ctx.beginPath();ctx.ellipse(-1.8,1.8,4.2,3.3,0,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle="#385b42";ctx.lineWidth=.8;ctx.beginPath();ctx.arc(-1.8,1.8,2.5,.2,5.7);ctx.stroke();
-      ctx.fillStyle="#91bd78";ctx.beginPath();ctx.arc(3.1,-.1+lookUp,2.8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#547c59";ctx.beginPath();ctx.ellipse(-2.2,1.7,5.3,4.2,-.08,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#6ea06b";ctx.beginPath();ctx.ellipse(-2.3,1.3,3.6,2.8,-.08,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#36533d";ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(-5,1.1);ctx.quadraticCurveTo(-2,-1.4,1.2,1.3);ctx.moveTo(-4.8,2.8);ctx.quadraticCurveTo(-2.1,.7,.8,3);ctx.stroke();
+      ctx.fillStyle="#9ac982";ctx.beginPath();ctx.arc(3.7,-.45+lookUp,3.35,0,Math.PI*2);ctx.fill();
       ctx.fillStyle="#24352e";
-      if(player.blink>0)ctx.fillRect(3.5,-.5+lookUp,2,.7);
-      else{ctx.beginPath();ctx.arc(4.2,-.7+lookUp,.65,0,Math.PI*2);ctx.fill();}
+      if(player.blink>0)ctx.fillRect(3.8,-.65+lookUp,2.3,.7);
+      else{ctx.beginPath();ctx.arc(4.8,-.85+lookUp,.72,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle="rgba(255,244,190,.68)";ctx.beginPath();ctx.arc(5.05,-1.1+lookUp,.22,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
 
     drawCockpit(ctx, player, time) {
-      ctx.save();ctx.beginPath();ctx.moveTo(55,-15);ctx.quadraticCurveTo(76,-14,87,-5);ctx.lineTo(64,0);ctx.closePath();ctx.clip();
-      ctx.fillStyle="#29465d";ctx.fillRect(52,-18,38,16);
+      ctx.save();ctx.beginPath();ctx.moveTo(51,-15.5);ctx.quadraticCurveTo(75,-16,89,-5);ctx.lineTo(62,1.5);ctx.closePath();ctx.clip();
+      const cockpitGlow=ctx.createLinearGradient(55,-17,82,1);
+      cockpitGlow.addColorStop(0,"#4f7b91");cockpitGlow.addColorStop(.55,"#294c62");cockpitGlow.addColorStop(1,"#152e41");
+      ctx.fillStyle=cockpitGlow;ctx.fillRect(49,-19,43,22);
       const reaction=player.hitReaction>0?Math.sin(time*30)*1.1:0;
       ctx.translate(reaction,0);
-      ctx.fillStyle="#1c2c3b";ctx.beginPath();ctx.arc(70,-10,4.4,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#6b4438";ctx.beginPath();ctx.arc(67,-10,2.3,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#d9a07f";ctx.beginPath();ctx.arc(71,-10,3.2,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#17283c";ctx.beginPath();ctx.moveTo(65,-5);ctx.lineTo(77,-5);ctx.lineTo(79,2);ctx.lineTo(63,2);ctx.closePath();ctx.fill();
-      ctx.fillStyle="#eef3f5";ctx.beginPath();ctx.moveTo(68,-5);ctx.lineTo(71,-1);ctx.lineTo(72,-5);ctx.fill();
-      ctx.beginPath();ctx.moveTo(72,-5);ctx.lineTo(72,-1);ctx.lineTo(75,-5);ctx.fill();
-      ctx.fillStyle="#20364b";ctx.beginPath();ctx.moveTo(66,-14);ctx.lineTo(75,-14);ctx.lineTo(77,-12);ctx.lineTo(65,-12);ctx.closePath();ctx.fill();
-      ctx.strokeStyle="#d9a07f";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(74,-3);ctx.lineTo(80,-1);ctx.stroke();
+
+      // Versión simplificada de la capitana de portada: cabello negro lacio,
+      // gorra y uniforme comercial legibles incluso a escala de juego.
+      ctx.fillStyle="#0b1522";ctx.beginPath();ctx.roundRect(62.5,-14,10.5,13.8,3.8);ctx.fill();
+      ctx.fillStyle="#c9836f";ctx.beginPath();ctx.ellipse(69,-9,4.15,4.9,-.06,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#0b1522";ctx.beginPath();ctx.arc(67.1,-10.8,3.2,Math.PI,Math.PI*2);ctx.lineTo(64,-4.4);ctx.quadraticCurveTo(66,-5.2,67,-7);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(72,-12.6);ctx.quadraticCurveTo(74,-8,72.4,-3.7);ctx.lineTo(70.7,-4.4);ctx.lineTo(70.8,-12.7);ctx.closePath();ctx.fill();
+
+      ctx.fillStyle="#17283c";ctx.beginPath();ctx.moveTo(61.5,-3.8);ctx.quadraticCurveTo(69,-6,76.5,-3.5);ctx.lineTo(80,3);ctx.lineTo(59,3);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#f4f7f5";ctx.beginPath();ctx.moveTo(65,-4.2);ctx.lineTo(69,-.2);ctx.lineTo(69.2,-4.8);ctx.fill();
+      ctx.beginPath();ctx.moveTo(69.2,-4.8);ctx.lineTo(69,-.2);ctx.lineTo(73.1,-4.1);ctx.fill();
+      ctx.fillStyle="#d6ad55";ctx.beginPath();ctx.moveTo(68.5,-3.9);ctx.lineTo(70,-3.9);ctx.lineTo(70.5,.6);ctx.lineTo(69.2,2);ctx.lineTo(68.2,.5);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#183149";ctx.beginPath();ctx.moveTo(62,-15.3);ctx.quadraticCurveTo(68.5,-17.4,75,-15.1);ctx.lineTo(75.8,-12.5);ctx.lineTo(61.3,-12.5);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#d6ad55";ctx.fillRect(62.2,-13.1,12.7,.8);
+      ctx.beginPath();ctx.ellipse(68.6,-14.4,1.1,.7,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#23313a";ctx.beginPath();ctx.arc(70.5,-9.2,.42,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="rgba(88,46,44,.7)";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(69.5,-6.8);ctx.quadraticCurveTo(70.5,-6.2,71.4,-6.8);ctx.stroke();
+      ctx.strokeStyle="#c9836f";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(75,-2.8);ctx.lineTo(82,-.3);ctx.stroke();
       ctx.restore();
-      ctx.strokeStyle="rgba(183,221,239,.72)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(55,-15);ctx.quadraticCurveTo(76,-14,87,-5);ctx.lineTo(64,0);ctx.closePath();ctx.stroke();
-      ctx.strokeStyle="rgba(222,242,250,.35)";ctx.beginPath();ctx.moveTo(75,-13);ctx.lineTo(71,-5);ctx.stroke();
+      ctx.strokeStyle="rgba(183,221,239,.88)";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(51,-15.5);ctx.quadraticCurveTo(75,-16,89,-5);ctx.lineTo(62,1.5);ctx.closePath();ctx.stroke();
+      ctx.strokeStyle="rgba(222,242,250,.46)";ctx.beginPath();ctx.moveTo(76,-14);ctx.lineTo(71,-4.5);ctx.stroke();
     }
 
     drawNavigationLights(ctx, time, ending) {
