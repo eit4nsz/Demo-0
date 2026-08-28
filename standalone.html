@@ -1210,6 +1210,12 @@ kbd {
       this.clouds = Array.from({ length: 26 }, (_, index) => ({
         x: random.range(0, 1), y: random.range(.14, .78), scale: random.range(.55, 1.7), depth: index % 3, alpha: random.range(.13, .34)
       }));
+      this.horizonLights = Array.from({ length: 54 }, (_, index) => ({
+        x: index / 53,
+        height: random.range(2, 13),
+        warmth: random.next(),
+        phase: random.range(0, Math.PI * 2)
+      }));
       this.landmarks = [
         { at: .055, name: "La ciudad despierta", type: "city" },
         { at: .13, name: "París · Torre Eiffel", type: "eiffel" },
@@ -1228,11 +1234,12 @@ kbd {
       const sceneProgress = lerp(progress, .16, arrival);
       const altitudeRatio = lerp(clamp(game.player.position.y / CONFIG.maxAltitude, 0, 1), .08, arrival);
       this.drawSky(ctx, w, h, sceneProgress, altitudeRatio);
+      this.drawSkyDetails(ctx, w, h, sceneProgress, altitudeRatio, game.time);
       this.drawStars(ctx, w, h, sceneProgress, altitudeRatio, game.time, game.camera.x);
       this.drawMoon(ctx, w, h, sceneProgress, game.time);
       this.drawAtmosphere(ctx, w, h, sceneProgress, altitudeRatio);
       this.drawCloudLayer(ctx, w, h, sceneProgress, game.camera, game.time, 0);
-      this.drawTerrain(ctx, w, h, sceneProgress, game.time);
+      this.drawTerrain(ctx, w, h, sceneProgress, game.camera.x, game.time);
       if (arrival < .04) this.drawLandmarks(ctx, w, h, progress, game.camera.x);
       this.drawCloudLayer(ctx, w, h, sceneProgress, game.camera, game.time, 1);
       if (arrival > .02) this.drawAirport(ctx, w, h, arrival, game.arrivalTimer, game.state, game.reducedMotion);
@@ -1240,16 +1247,43 @@ kbd {
 
     drawSky(ctx, w, h, progress, altitudeRatio) {
       const space = smoothstep(.52, .94, Math.max(progress, altitudeRatio));
-      const top = mixColor([7, 15, 43], [1, 3, 13], space);
-      const bottom = mixColor([27, 38, 82], [7, 10, 29], space);
+      const top = mixColor([7, 26, 62], [1, 4, 18], space);
+      const bottom = mixColor([42, 63, 116], [12, 18, 48], space);
       const gradient = ctx.createLinearGradient(0, 0, 0, h);
       gradient.addColorStop(0, rgba(top));
       gradient.addColorStop(.68, rgba(bottom));
-      gradient.addColorStop(1, rgba(mixColor(bottom, [53, 35, 83], 1 - space), 1));
+      gradient.addColorStop(1, rgba(mixColor(bottom, [97, 48, 98], 1 - space), 1));
       ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
       const glow = ctx.createRadialGradient(w * .7, h * .58, 0, w * .7, h * .58, w * .7);
-      glow.addColorStop(0, `rgba(100,91,173,${(1 - space) * .17})`); glow.addColorStop(1, "rgba(0,0,0,0)");
+      glow.addColorStop(0, `rgba(99,210,226,${(1 - space) * .19})`); glow.addColorStop(.48, `rgba(106,88,190,${(1 - space) * .11})`); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+    }
+
+    drawSkyDetails(ctx, w, h, progress, altitudeRatio, time) {
+      const atmosphere = 1 - smoothstep(.58, .86, Math.max(progress, altitudeRatio));
+      if (atmosphere > .01) {
+        ctx.save();
+        const horizon = ctx.createLinearGradient(0, h * .44, 0, h * .82);
+        horizon.addColorStop(0, "rgba(255,157,111,0)");
+        horizon.addColorStop(.72, `rgba(255,123,118,${atmosphere * .12})`);
+        horizon.addColorStop(1, `rgba(255,203,126,${atmosphere * .045})`);
+        ctx.fillStyle = horizon; ctx.fillRect(0, h * .38, w, h * .48);
+        ctx.globalAlpha = atmosphere * .18;
+        ctx.strokeStyle = "rgba(164,232,242,.65)"; ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i += 1) {
+          const y = h * (.17 + i * .066) + Math.sin(time * .08 + i) * 3;
+          ctx.beginPath(); ctx.moveTo(-40, y); ctx.bezierCurveTo(w * .28, y - 10, w * .67, y + 12, w + 40, y - 4); ctx.stroke();
+        }
+        ctx.restore();
+      }
+      const spaceGlow = smoothstep(.52, .9, Math.max(progress, altitudeRatio));
+      if (spaceGlow > .01) {
+        const nebula = ctx.createRadialGradient(w * .2, h * .2, 0, w * .2, h * .2, w * .55);
+        nebula.addColorStop(0, `rgba(111,80,205,${spaceGlow * .13})`);
+        nebula.addColorStop(.52, `rgba(24,110,158,${spaceGlow * .07})`);
+        nebula.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = nebula; ctx.fillRect(0, 0, w, h);
+      }
     }
 
     drawStars(ctx, w, h, progress, altitudeRatio, time, cameraX) {
@@ -1296,23 +1330,45 @@ kbd {
       ctx.fillStyle = gradient; ctx.fillRect(0, h * .48, w, h * .52);
     }
 
-    drawTerrain(ctx, w, h, progress, time) {
+    drawTerrain(ctx, w, h, progress, cameraX, time) {
       const visibility = 1 - smoothstep(.46, .63, progress);
       if (visibility <= 0) return;
       const base = lerp(h * .78, h * 1.18, smoothstep(.25, .6, progress));
       ctx.save(); ctx.globalAlpha = visibility;
-      ctx.fillStyle = "#111b37"; ctx.beginPath(); ctx.moveTo(0, base);
-      for (let x = 0; x <= w + 80; x += 80) ctx.lineTo(x, base - 55 - Math.sin(x * .011 + time * .03) * 35 - Math.sin(x * .027) * 18);
-      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+      const layers = [
+        { step: 92, lift: 112, color: "#23345c", alpha: .48, depth: .012 },
+        { step: 74, lift: 76, color: "#182948", alpha: .72, depth: .021 },
+        { step: 62, lift: 49, color: "#101d37", alpha: 1, depth: .034 }
+      ];
+      layers.forEach((layer, layerIndex) => {
+        const offset = -((cameraX * layer.depth) % layer.step) - layer.step;
+        ctx.globalAlpha = visibility * layer.alpha;
+        ctx.fillStyle = layer.color; ctx.beginPath(); ctx.moveTo(-layer.step, h);
+        for (let x = offset; x <= w + layer.step; x += layer.step) {
+          const ridge = base - layer.lift - Math.sin((x + cameraX * layer.depth) * .014 + layerIndex) * (24 - layerIndex * 4) - Math.sin(x * .031) * 11;
+          ctx.lineTo(x, ridge);
+        }
+        ctx.lineTo(w + layer.step, h); ctx.closePath(); ctx.fill();
+      });
       const cityVisibility = 1 - smoothstep(.17, .33, progress);
-      ctx.globalAlpha *= cityVisibility;
+      ctx.globalAlpha = visibility * cityVisibility;
       for (let x = -20; x < w + 40; x += 34) {
         const bh = 28 + ((x * 19) % 77 + 77) % 77;
-        ctx.fillStyle = x % 68 === 0 ? "#141a34" : "#0d1630";
+        ctx.fillStyle = x % 68 === 0 ? "#182641" : "#101b34";
         ctx.fillRect(x, base - bh, 30, bh + 8);
-        ctx.fillStyle = "rgba(255,207,112,.62)";
+        const roofGlow = ctx.createLinearGradient(x, base - bh, x, base);
+        roofGlow.addColorStop(0, "rgba(92,158,190,.12)"); roofGlow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = roofGlow; ctx.fillRect(x, base - bh, 30, bh);
+        ctx.fillStyle = "rgba(255,211,112,.78)";
         for (let wy = base - bh + 10; wy < base - 8; wy += 15) for (let wx = x + 7; wx < x + 26; wx += 11) if ((wx + wy) % 3 < 2) ctx.fillRect(wx, wy, 3, 4);
       }
+      ctx.globalAlpha = visibility * cityVisibility;
+      this.horizonLights.forEach(light => {
+        const x = light.x * w;
+        const pulse = .65 + Math.sin(time * .7 + light.phase) * .2;
+        ctx.fillStyle = light.warmth > .28 ? `rgba(255,193,93,${pulse})` : `rgba(93,211,224,${pulse})`;
+        ctx.fillRect(x, base - 4 - light.height, 2, light.height);
+      });
       ctx.restore();
     }
 
@@ -1323,7 +1379,8 @@ kbd {
         const x = w * .5 + delta * w * 5.2;
         if (x < -180 || x > w + 180 || progress > .62) return;
         const alpha = clamp(1 - Math.abs(delta) * 5.5, 0, 1) * (1 - smoothstep(.52, .63, progress));
-        ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, ground); ctx.fillStyle = "#17213d"; ctx.strokeStyle = "#28345b"; ctx.lineWidth = 4;
+        ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, ground); ctx.fillStyle = "#1d3154"; ctx.strokeStyle = "rgba(116,188,213,.42)"; ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(74,169,207,.24)"; ctx.shadowBlur = 18;
         this.drawLandmarkShape(ctx, landmark.type);
         ctx.restore();
       });
@@ -1331,24 +1388,31 @@ kbd {
 
     drawLandmarkShape(ctx, type) {
       if (type === "eiffel") {
+        ctx.fillStyle = "#26395b";
         ctx.beginPath(); ctx.moveTo(-48,0); ctx.lineTo(-12,-165); ctx.lineTo(12,-165); ctx.lineTo(48,0); ctx.lineTo(24,0); ctx.lineTo(14,-66); ctx.lineTo(-14,-66); ctx.lineTo(-24,0); ctx.closePath(); ctx.fill();
-        ctx.fillRect(-28,-82,56,7); ctx.fillRect(-18,-125,36,5);
+        ctx.fillStyle = "#d8a85b"; ctx.fillRect(-28,-82,56,6); ctx.fillRect(-18,-125,36,4);
+        ctx.fillStyle = "#ffe7a6"; ctx.fillRect(-2,-156,4,7);
       } else if (type === "pyramids") {
-        ctx.fillStyle = "#4c3d51"; ctx.beginPath(); ctx.moveTo(-110,0); ctx.lineTo(-30,-105); ctx.lineTo(48,0); ctx.fill();
-        ctx.fillStyle = "#342c46"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(72,-75); ctx.lineTo(135,0); ctx.fill();
+        ctx.fillStyle = "#a96e50"; ctx.beginPath(); ctx.moveTo(-110,0); ctx.lineTo(-30,-105); ctx.lineTo(48,0); ctx.fill();
+        ctx.fillStyle = "#704b50"; ctx.beginPath(); ctx.moveTo(-30,-105); ctx.lineTo(48,0); ctx.lineTo(-10,0); ctx.fill();
+        ctx.fillStyle = "#c58d5d"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(72,-75); ctx.lineTo(135,0); ctx.fill();
+        ctx.fillStyle = "rgba(255,209,121,.26)"; ctx.fillRect(-135,-4,285,4);
       } else if (type === "liberty") {
+        ctx.fillStyle = "#4f8b83";
         ctx.fillRect(-25,-92,50,92); ctx.fillRect(-15,-153,30,64); ctx.beginPath(); ctx.arc(0,-166,18,0,Math.PI*2); ctx.fill();
-        ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(10,-144); ctx.lineTo(42,-200); ctx.stroke(); ctx.fillStyle = "#f4c46b"; ctx.beginPath(); ctx.arc(44,-205,7,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#64a89a"; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(10,-144); ctx.lineTo(42,-200); ctx.stroke(); ctx.fillStyle = "#ffd06a"; ctx.shadowColor="#ffd06a";ctx.beginPath(); ctx.arc(44,-205,7,0,Math.PI*2); ctx.fill();
       } else if (type === "christ") {
+        ctx.fillStyle = "#365f64";
         ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(-12,-96); ctx.lineTo(-75,-78); ctx.lineTo(-78,-94); ctx.lineTo(-16,-117); ctx.arc(0,-142,16,Math.PI,0); ctx.lineTo(16,-117); ctx.lineTo(78,-94); ctx.lineTo(75,-78); ctx.lineTo(12,-96); ctx.lineTo(20,0); ctx.fill();
       } else if (type === "fuji") {
-        ctx.fillStyle = "#263553"; ctx.beginPath(); ctx.moveTo(-145,0); ctx.lineTo(0,-142); ctx.lineTo(150,0); ctx.fill();
-        ctx.fillStyle = "#d9d8e3"; ctx.beginPath(); ctx.moveTo(-35,-108); ctx.lineTo(0,-142); ctx.lineTo(39,-105); ctx.lineTo(18,-111); ctx.lineTo(4,-98); ctx.lineTo(-12,-112); ctx.fill();
+        ctx.fillStyle = "#405782"; ctx.beginPath(); ctx.moveTo(-145,0); ctx.lineTo(0,-142); ctx.lineTo(150,0); ctx.fill();
+        ctx.fillStyle = "#eef4f5"; ctx.beginPath(); ctx.moveTo(-35,-108); ctx.lineTo(0,-142); ctx.lineTo(39,-105); ctx.lineTo(18,-111); ctx.lineTo(4,-98); ctx.lineTo(-12,-112); ctx.fill();
+        ctx.fillStyle = "rgba(255,134,158,.34)"; ctx.fillRect(-160,-3,320,4);
       } else if (type === "coast") {
-        ctx.fillStyle = "rgba(80,120,160,.32)"; ctx.fillRect(-150,-8,300,8);
-        ctx.fillStyle = "#1b2845"; for (let x=-120;x<120;x+=30) ctx.fillRect(x,-25-(x%50),24,25+(x%50));
+        ctx.fillStyle = "rgba(56,184,201,.5)"; ctx.fillRect(-150,-8,300,8);
+        ctx.fillStyle = "#20365a"; for (let x=-120;x<120;x+=30) { ctx.fillRect(x,-25-(x%50),24,25+(x%50)); ctx.fillStyle="#f5bf65";ctx.fillRect(x+7,-14-(x%50),3,4);ctx.fillStyle="#20365a"; }
       } else {
-        for (let x=-120;x<120;x+=28) { const bh=35+Math.abs((x*7)%90); ctx.fillRect(x,-bh,23,bh); }
+        for (let x=-120;x<120;x+=28) { const bh=35+Math.abs((x*7)%90); ctx.fillStyle=x%56===0?"#244766":"#1b3153";ctx.fillRect(x,-bh,23,bh);ctx.fillStyle="rgba(255,202,99,.75)";for(let wy=-bh+9;wy<-7;wy+=14)ctx.fillRect(x+8,wy,3,4); }
       }
     }
 
@@ -1469,10 +1533,24 @@ kbd {
       ctx.quadraticCurveTo(70,21,-48,18); ctx.lineTo(-82,7); ctx.closePath(); ctx.fill();
       ctx.shadowColor = "transparent";
 
+      ctx.strokeStyle = hitFlash ? "#fff" : "rgba(35,66,88,.72)"; ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = hitFlash ? "rgba(255,255,255,.9)" : "#2a8f9b"; ctx.lineWidth = 3.4;
+      ctx.beginPath(); ctx.moveTo(-69,4); ctx.bezierCurveTo(-22,9,44,8,88,2); ctx.stroke();
+      ctx.strokeStyle = hitFlash ? "rgba(255,255,255,.8)" : "rgba(214,171,75,.9)"; ctx.lineWidth = 1.15;
+      ctx.beginPath(); ctx.moveTo(-66,7); ctx.bezierCurveTo(-20,12,45,11,82,6); ctx.stroke();
+
+      ctx.save(); ctx.translate(-67,-25); ctx.rotate(-.24);
+      ctx.fillStyle = hitFlash ? "#fff" : "#d5a94d";
+      ctx.beginPath(); ctx.moveTo(-7,1); ctx.lineTo(0,-5); ctx.lineTo(7,1); ctx.lineTo(0,5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = hitFlash ? "#fff" : "#2a8f9b"; ctx.beginPath(); ctx.arc(0,0,2.3,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+
       ctx.fillStyle = hitFlash ? "#fff" : "#b9c8d3";
       ctx.beginPath(); ctx.moveTo(-18,7); ctx.lineTo(32,47); ctx.lineTo(61,43); ctx.lineTo(17,5); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,.36)"; ctx.lineWidth = 1.4;
+      ctx.strokeStyle = "rgba(255,255,255,.52)"; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(-70,-7); ctx.quadraticCurveTo(2,-17,80,-8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-10,7); ctx.lineTo(33,42); ctx.stroke();
 
       this.drawEngine(ctx, -1, 25, time, arriving, true);
       this.drawEngine(ctx, 28, 32, time, arriving, false);
@@ -1522,6 +1600,9 @@ kbd {
       ctx.fillStyle=nacelle;ctx.beginPath();ctx.ellipse(0,0,20,10,0,0,Math.PI*2);ctx.fill();
       ctx.fillStyle="#30495d";ctx.beginPath();ctx.ellipse(13,0,6.5,7.5,0,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle=`rgba(176,224,245,${ending ? .18 : .42})`;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(13,0,4.2,0,Math.PI*2);ctx.stroke();
+      ctx.save();ctx.translate(13,0);ctx.rotate(time*7+(far?1.4:0));ctx.strokeStyle="rgba(189,225,235,.58)";ctx.lineWidth=.8;
+      for(let blade=0;blade<5;blade+=1){ctx.rotate(Math.PI*2/5);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(3.6,0);ctx.stroke();}ctx.restore();
+      ctx.strokeStyle="rgba(255,255,255,.42)";ctx.beginPath();ctx.arc(-1,-1,17.5,3.55,5.4);ctx.stroke();
       ctx.fillStyle=`rgba(119,199,232,${.2+Math.sin(time*15+x)*.08})`;ctx.beginPath();ctx.ellipse(-15,0,4,6,0,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
