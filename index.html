@@ -84,26 +84,21 @@
               <span class="visually-hidden">Reducir movimiento</span>
             </label>
           </div>
-          <div class="setting-row">
-            <div class="setting-copy"><strong>Sonido</strong><span>Control preparado para conectarse al sistema de audio.</span></div>
-            <output id="sound-status" class="sound-status" for="sound-range">Preparado · 70%</output>
-            <div class="sound-control">
-              <input id="sound-range" type="range" min="0" max="100" value="70" aria-label="Volumen de sonido preparado">
-              <span aria-hidden="true">♪</span>
-            </div>
-          </div>
-          <p class="menu-panel__note">El control de sonido queda preparado sin añadir audio nuevo en esta fase.</p>
         </div>
 
         <div class="menu-panel__view" data-menu-view="credits" hidden>
           <p class="menu-panel__kicker">Bitácora de tripulación</p>
           <h2 id="menu-credits-title">Créditos</h2>
-          <div class="credit-fields">
-            <label>Diseño y desarrollo<input type="text" value="[Nombre por completar]" aria-label="Nombre de diseño y desarrollo"></label>
-            <label>Arte y personajes<input type="text" value="[Nombre por completar]" aria-label="Nombre de arte y personajes"></label>
-            <label>Música y sonido<input type="text" value="[Nombre por completar]" aria-label="Nombre de música y sonido"></label>
+          <div class="credit-roster" role="list" aria-label="Tripulación acreditada">
+            <article class="credit-entry" role="listitem">
+              <span>Piloto del avión comercial</span>
+              <strong>Ali</strong>
+            </article>
+            <article class="credit-entry" role="listitem">
+              <span>Pasajero designado demo 0</span>
+              <strong>Tortu Eitan</strong>
+            </article>
           </div>
-          <p class="menu-panel__note">Puedes reemplazar manualmente estos textos cuando confirmes los créditos finales.</p>
         </div>
       </section>
     </dialog>
@@ -137,6 +132,8 @@
 
     <div id="region-label" class="region-label" aria-live="polite"></div>
     <div id="flight-message" class="flight-message" aria-live="polite"></div>
+    <p id="character-announcement" class="visually-hidden" aria-live="polite"></p>
+    <p id="epilogue-announcement" class="visually-hidden" aria-live="polite"></p>
 
     <section id="pause-screen" class="screen" aria-labelledby="pause-title" hidden>
       <div class="dialog-card dialog-card--compact">
@@ -149,8 +146,8 @@
 
     <section id="ending-screen" class="screen" aria-labelledby="ending-title" hidden>
       <div class="dialog-card ending-card">
-        <p class="eyebrow">Bitácora lunar</p>
-        <h2 id="ending-title">Vuelo completado</h2>
+        <p class="eyebrow">Bitácora de Tierra</p>
+        <h2 id="ending-title">Fin del viaje</h2>
         <p id="ending-line-1" class="ending-main"></p>
         <p id="ending-line-2" class="ending-sub"></p>
         <button id="restart-button" class="primary-button" type="button">Volver a volar <span aria-hidden="true">↻</span></button>

@@ -534,28 +534,20 @@ kbd {
 .hangar-switch input:checked + .hangar-switch__track { border-color: #77e6e0; background: #185d62; }
 .hangar-switch input:checked + .hangar-switch__track::after { transform: translateX(27px); background: #d9fffa; }
 .hangar-switch input:focus-visible + .hangar-switch__track { outline: 3px solid #77e6e0; outline-offset: 4px; }
-.sound-control { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
-.sound-control input { width: 100%; accent-color: #77e6e0; cursor: pointer; }
-.sound-control input:focus-visible { outline: 3px solid #77e6e0; outline-offset: 4px; }
-.sound-status { color: #77e6e0; font-size: .7rem; font-weight: 900; letter-spacing: .08em; white-space: nowrap; text-transform: uppercase; }
-.credit-fields { display: grid; gap: 15px; }
-.credit-fields label { color: #77e6e0; font-size: .7rem; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
-.credit-fields input {
-  display: block;
-  width: 100%;
-  margin-top: 7px;
-  padding: 13px 14px;
-  border: 1px solid #6c725c;
-  border-bottom: 3px solid #c18b3b;
-  border-radius: 3px 7px;
-  outline: 0;
-  color: #fff5c4;
-  background: rgba(2,12,18,.6);
-  font-size: .95rem;
-  box-shadow: inset 0 3px 8px rgba(0,0,0,.5);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+.credit-roster { display: grid; gap: 15px; }
+.credit-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 4px solid #111c31;
+  border-radius: 8px 18px 7px 14px;
+  background: linear-gradient(145deg, #2f5d64, #1b3e49);
+  box-shadow: 0 7px 0 rgba(7,15,29,.72), inset 0 4px rgba(255,255,255,.08);
 }
-.credit-fields input:focus { border-color: #77e6e0; box-shadow: 0 0 0 3px rgba(119,230,224,.24), inset 0 3px 8px rgba(0,0,0,.5); }
+.credit-entry span { color: #8be1d5; font-size: .72rem; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.credit-entry strong { color: #fff0bd; font-size: clamp(1.2rem, 3vw, 1.7rem); text-shadow: 0 3px 0 #934732, 0 5px 0 #111c31; }
 .menu-panel__note { margin: 20px 0 0; padding-top: 13px; border-top: 1px solid rgba(255,241,175,.18); color: #9fb9b8; font-size: .72rem; line-height: 1.45; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .menu-reduce-motion .menu-world *,
@@ -885,13 +877,11 @@ kbd {
   box-shadow: 0 6px 0 rgba(7,15,29,.72), inset 0 4px rgba(255,255,255,.08);
 }
 .instruction-item:nth-child(2n) { background: #385f86; }
-.instruction-item strong, .setting-copy strong, .credit-fields label { color: #88e2d5; }
+.instruction-item strong, .setting-copy strong { color: #88e2d5; }
 .instruction-item p, .setting-copy span { color: #fff0c0; }
 .setting-row { border-top: 3px dashed rgba(255,208,103,.48); }
 .hangar-switch__track { border: 3px solid var(--game-ink); border-radius: 7px; background: #112838; box-shadow: inset 0 4px 0 rgba(0,0,0,.3); }
 .hangar-switch input:checked + .hangar-switch__track { background: #278c84; }
-.sound-control input { accent-color: var(--game-coral); }
-.credit-fields input { border: 3px solid var(--game-ink); border-bottom-width: 6px; color: var(--game-cream); background: #173540; }
 
 .hud {
   top: max(14px, env(safe-area-inset-top));
@@ -919,6 +909,14 @@ kbd {
 .difficulty-track i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #63b77e, #f0c348, #e55e48); transition: width 180ms linear; }
 .life-card, .fuel-card { border-radius: 8px 15px 7px 13px; }
 .life-card strong { color: #ff8066; text-shadow: 0 2px 0 #722f2d; }
+.life-card #lives-value { display: flex; align-items: center; gap: 2px; min-height: 27px; }
+.life-cow { width: 26px; height: 21px; overflow: visible; filter: drop-shadow(0 2px 0 rgba(7,15,29,.8)); }
+.life-cow .cow-wing { fill: #d9f5f0; stroke: #111c31; stroke-width: 1.8; }
+.life-cow .cow-body { fill: #fff0bd; stroke: #111c31; stroke-width: 2; }
+.life-cow .cow-spot { fill: #26354a; }
+.life-cow .cow-muzzle { fill: #e99a8b; stroke: #111c31; stroke-width: 1.5; }
+.life-cow .cow-heart { fill: #ff6f61; stroke: #7c302e; stroke-width: 1.2; }
+.life-cow.is-empty { opacity: .25; filter: grayscale(1) drop-shadow(0 2px 0 rgba(7,15,29,.8)); }
 .life-card.is-hit {
   border-color: #ffcc65;
   background: linear-gradient(145deg, #7e3f35, #3c2631);
@@ -1004,13 +1002,14 @@ kbd {
   .world-menu__option:nth-child(4) { transform: translateX(5px) rotate(-.4deg); width: calc(100% - 5px); }
   .route-card { display: none; }
   .hud-group > div { min-width: 76px; }
+  .life-cow { width: 16px; height: 15px; }
   .touch-controls button { width: 60px; height: 60px; }
 }
 
 @media (max-width:480px) {
   .hud { left: 7px; right: 7px; gap: 5px; }
   .hud-group > div { min-width: 59px; padding: 7px 6px; }
-  .life-card { min-width: 62px; }
+  .life-card { min-width: 72px; padding-inline: 4px; }
   .fuel-card { width: 92px; }
   .touch-controls { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
 }
@@ -1083,26 +1082,21 @@ kbd {
               <span class="visually-hidden">Reducir movimiento</span>
             </label>
           </div>
-          <div class="setting-row">
-            <div class="setting-copy"><strong>Sonido</strong><span>Control preparado para conectarse al sistema de audio.</span></div>
-            <output id="sound-status" class="sound-status" for="sound-range">Preparado · 70%</output>
-            <div class="sound-control">
-              <input id="sound-range" type="range" min="0" max="100" value="70" aria-label="Volumen de sonido preparado">
-              <span aria-hidden="true">♪</span>
-            </div>
-          </div>
-          <p class="menu-panel__note">El control de sonido queda preparado sin añadir audio nuevo en esta fase.</p>
         </div>
 
         <div class="menu-panel__view" data-menu-view="credits" hidden>
           <p class="menu-panel__kicker">Bitácora de tripulación</p>
           <h2 id="menu-credits-title">Créditos</h2>
-          <div class="credit-fields">
-            <label>Diseño y desarrollo<input type="text" value="[Nombre por completar]" aria-label="Nombre de diseño y desarrollo"></label>
-            <label>Arte y personajes<input type="text" value="[Nombre por completar]" aria-label="Nombre de arte y personajes"></label>
-            <label>Música y sonido<input type="text" value="[Nombre por completar]" aria-label="Nombre de música y sonido"></label>
+          <div class="credit-roster" role="list" aria-label="Tripulación acreditada">
+            <article class="credit-entry" role="listitem">
+              <span>Piloto del avión comercial</span>
+              <strong>Ali</strong>
+            </article>
+            <article class="credit-entry" role="listitem">
+              <span>Pasajero designado demo 0</span>
+              <strong>Tortu Eitan</strong>
+            </article>
           </div>
-          <p class="menu-panel__note">Puedes reemplazar manualmente estos textos cuando confirmes los créditos finales.</p>
         </div>
       </section>
     </dialog>
@@ -1136,6 +1130,8 @@ kbd {
 
     <div id="region-label" class="region-label" aria-live="polite"></div>
     <div id="flight-message" class="flight-message" aria-live="polite"></div>
+    <p id="character-announcement" class="visually-hidden" aria-live="polite"></p>
+    <p id="epilogue-announcement" class="visually-hidden" aria-live="polite"></p>
 
     <section id="pause-screen" class="screen" aria-labelledby="pause-title" hidden>
       <div class="dialog-card dialog-card--compact">
@@ -1148,8 +1144,8 @@ kbd {
 
     <section id="ending-screen" class="screen" aria-labelledby="ending-title" hidden>
       <div class="dialog-card ending-card">
-        <p class="eyebrow">Bitácora lunar</p>
-        <h2 id="ending-title">Vuelo completado</h2>
+        <p class="eyebrow">Bitácora de Tierra</p>
+        <h2 id="ending-title">Fin del viaje</h2>
         <p id="ending-line-1" class="ending-main"></p>
         <p id="ending-line-2" class="ending-sub"></p>
         <button id="restart-button" class="primary-button" type="button">Volver a volar <span aria-hidden="true">↻</span></button>
@@ -1174,9 +1170,10 @@ kbd {
   const GAME_TEXT = Object.freeze({
     title: "Escuela de Aviación",
     intro: "Un vuelo nocturno alrededor del mundo.",
-    endingTitle: "Misión completada",
-    endingLine1: "Del aeropuerto a las estrellas.",
-    endingLine2: "La tortuga llegó a la Luna."
+    endingTitle: "Fin del viaje",
+    endingLine1: "El cohete llegó a la Luna…",
+    endingLine2: "pero Tortu Eitan seguía en la Tierra.",
+    catFinalLine: "La tortuga nunca llegará a la luna"
   });
 
   const CONFIG = Object.freeze({
@@ -1186,7 +1183,7 @@ kbd {
     minAltitude: 110,
     cruiseSpeed: 174,
     routeSpeedBoost: 36,
-    arrivalDurations: Object.freeze({ approach: 3.2, landing: 4, taxi: 3.2, disembark: 4.2, transfer: 4.5, launch: 5.5, moon: 4 }),
+    arrivalDurations: Object.freeze({ approach: 3.2, landing: 4, taxi: 3.2, disembark: 4.2, transfer: 4.5, launch: 5.5, moon: 2.3, epilogue: 5 }),
     obstacleGap: [300, 820],
     obstacleSpeed: [52, 195],
     obstacleAmplitude: [18, 96],
@@ -1206,6 +1203,17 @@ kbd {
   };
   const mixColor = (a, b, t) => a.map((value, index) => Math.round(lerp(value, b[index], t)));
   const rgba = (color, alpha = 1) => `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+  const lifeCowMarkup = active => `
+    <svg class="life-cow ${active ? "is-active" : "is-empty"}" viewBox="0 0 44 30" aria-hidden="true" focusable="false">
+      <path class="cow-wing" d="M13 11C8 3 3 4 2 7c4 1 5 4 7 8z"/>
+      <path class="cow-wing" d="M31 11c5-8 10-7 11-4-4 1-5 4-7 8z"/>
+      <ellipse class="cow-body" cx="22" cy="14" rx="12" ry="8"/>
+      <path class="cow-spot" d="M15 9c4-3 7-1 7 2s-5 5-8 2zM25 16c3-3 7-2 8 1-1 3-5 4-8 2z"/>
+      <circle class="cow-body" cx="34" cy="14" r="6"/>
+      <ellipse class="cow-muzzle" cx="37" cy="17" rx="5" ry="3"/>
+      <circle cx="35" cy="12" r="1.2" fill="#111c31"/>
+      <path class="cow-heart" d="M22 29C13 23 17 18 22 22c5-4 9 1 0 7z"/>
+    </svg>`;
   const getDifficulty = progress => {
     const level = smoothstep(.04, .88, clamp(progress, 0, 1));
     const stage = progress < .2 ? "DESPEGUE" : progress < .45 ? "RUTA" : progress < .7 ? "ALTURA" : progress < .9 ? "INTENSA" : "APROXIMACIÓN";
@@ -1833,6 +1841,10 @@ kbd {
     renderMission(ctx, view, game) {
       const { width: w, height: h } = view;
       const stage = game.state;
+      if (stage === "EPILOGUE") {
+        this.drawEarthEpilogue(ctx, w, h, game.phaseTimer / CONFIG.arrivalDurations.epilogue, game.time, game.reducedMotion);
+        return;
+      }
       if (stage === "MOON") {
         this.drawSky(ctx, w, h, 1, 1);
         this.drawSkyDetails(ctx, w, h, 1, 1, game.time);
@@ -1890,6 +1902,54 @@ kbd {
       const horizon=h*.7;const surface=ctx.createLinearGradient(0,horizon,0,h);surface.addColorStop(0,"#697284");surface.addColorStop(.55,"#3e4657");surface.addColorStop(1,"#242b3b");ctx.fillStyle=surface;ctx.beginPath();ctx.moveTo(0,horizon);for(let x=0;x<=w+80;x+=80)ctx.lineTo(x,horizon+Math.sin(x*.019)*18+Math.sin(x*.043)*7);ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fill();
       ctx.fillStyle="rgba(18,23,35,.34)";[[.14,.79,.08,.022],[.47,.84,.12,.03],[.76,.76,.075,.02],[.9,.9,.1,.027]].forEach(([x,y,rx,ry])=>{ctx.beginPath();ctx.ellipse(w*x,h*y,w*rx,h*ry,-.1,0,Math.PI*2);ctx.fill();});
       const shine=.08+Math.sin(time*.45)*.01;ctx.fillStyle=`rgba(229,235,244,${shine})`;ctx.fillRect(0,horizon,w,2);
+    }
+
+    drawEarthEpilogue(ctx, w, h, phase, time, reducedMotion) {
+      const reveal = smoothstep(0, .18, phase);
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, "#101f4d");
+      sky.addColorStop(.58, "#3e5380");
+      sky.addColorStop(1, "#d27b67");
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+
+      const moonX = w * .78, moonY = h * .18, moonR = Math.min(w, h) * .09;
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * .3, moonX, moonY, moonR * 2.2);
+      moonGlow.addColorStop(0, "rgba(255,246,190,.5)"); moonGlow.addColorStop(1, "rgba(255,246,190,0)");
+      ctx.fillStyle = moonGlow; ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff0b6"; ctx.strokeStyle = "#493d63"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(101,89,113,.18)";
+      [[-.28,-.18,.17],[.22,-.3,.12],[.12,.22,.2]].forEach(([ox,oy,r])=>{ctx.beginPath();ctx.arc(moonX+moonR*ox,moonY+moonR*oy,moonR*r,0,Math.PI*2);ctx.fill();});
+
+      ctx.fillStyle = "rgba(244,244,214,.75)";
+      for (let i = 0; i < 48; i += 1) {
+        const x = ((i * 173 + 41) % 997) / 997 * w;
+        const y = ((i * 97 + 13) % 431) / 431 * h * .56;
+        const twinkle = reducedMotion ? .72 : .56 + Math.sin(time * 1.2 + i) * .2;
+        ctx.globalAlpha = twinkle; ctx.beginPath(); ctx.arc(x, y, 1 + i % 3 * .35, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      const ground = h * .72;
+      ctx.fillStyle = "#15273a"; ctx.beginPath(); ctx.moveTo(0, ground);
+      for (let x = 0; x <= w + 90; x += 90) ctx.lineTo(x, ground - 18 - Math.sin(x * .025) * 17);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#22374b"; ctx.fillRect(w * .08, ground - h * .17, w * .29, h * .17);
+      ctx.fillStyle = "#0f1d30"; ctx.fillRect(w * .1, ground - h * .13, w * .25, h * .13);
+      ctx.fillStyle = "rgba(255,205,103,.8)";
+      for (let x = w * .12; x < w * .34; x += 34) ctx.fillRect(x, ground - h * .1, 14, 7);
+      ctx.fillStyle = "#1c3045"; ctx.fillRect(w * .43, ground - h * .22, 13, h * .22);
+      ctx.fillStyle = "#37526b"; ctx.beginPath(); ctx.roundRect(w * .405, ground - h * .25, w * .06, h * .055, 6); ctx.fill();
+      ctx.fillStyle = "rgba(134,226,221,.72)"; ctx.fillRect(w * .417, ground - h * .235, w * .036, 5);
+      ctx.fillStyle = "#24364b"; ctx.fillRect(0, ground, w, h - ground);
+      ctx.fillStyle = "rgba(255,199,77,.8)";
+      for (let x = 20; x < w; x += 86) { ctx.fillRect(x, ground + 22, 8, 4); ctx.fillRect(x, ground + 22, 2, 25); }
+
+      ctx.save(); ctx.globalAlpha = reveal; ctx.translate(w * .5, h * .62);
+      ctx.fillStyle = "#ffc955"; ctx.strokeStyle = "#111c31"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.roundRect(-112, -24, 224, 48, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#18233b"; ctx.font = `950 ${clamp(w * .014, 13, 21)}px Segoe UI, sans-serif`; ctx.textAlign = "center";
+      ctx.fillText("MIENTRAS TANTO · EN LA TIERRA", 0, 7); ctx.restore();
     }
 
     drawAirport(ctx, w, h, arrival, time, state, reducedMotion) {
@@ -2157,11 +2217,14 @@ kbd {
       this.fuelFill = root.querySelector("#fuel-fill");
       this.fuelTrack = root.querySelector(".fuel-track");
       this.lives = root.querySelector("#lives-value");
+      this.renderedLives = -1;
       this.difficulty = root.querySelector("#difficulty-value");
       this.difficultyFill = root.querySelector("#difficulty-fill");
       this.difficultyTrack = root.querySelector(".difficulty-track");
       this.region = root.querySelector("#region-label");
       this.message = root.querySelector("#flight-message");
+      this.characterAnnouncement = root.querySelector("#character-announcement");
+      this.epilogueAnnouncement = root.querySelector("#epilogue-announcement");
       root.querySelector("#ending-title").textContent = GAME_TEXT.endingTitle;
       root.querySelector("#ending-line-1").textContent = GAME_TEXT.endingLine1;
       root.querySelector("#ending-line-2").textContent = GAME_TEXT.endingLine2;
@@ -2188,8 +2251,10 @@ kbd {
       this.fuelFill.style.width = `${fuel}%`;
       this.fuelFill.style.background = fuel < 20 ? "linear-gradient(90deg,#e46f73,#ffc47d)" : "linear-gradient(90deg,#70e0d4,#fff0a6)";
       this.fuelTrack.setAttribute("aria-valuenow", String(Math.round(fuel)));
-      const hearts = Array.from({ length: CONFIG.maxLives }, (_, index) => index < player.lives ? "♥" : "♡").join(" ");
-      if (this.lives.textContent !== hearts) this.lives.textContent = hearts;
+      if (this.renderedLives !== player.lives) {
+        this.lives.innerHTML = Array.from({ length: CONFIG.maxLives }, (_, index) => lifeCowMarkup(index < player.lives)).join("");
+        this.renderedLives = player.lives;
+      }
       this.lives.classList.toggle("is-full", player.lives >= CONFIG.maxLives);
       this.lives.parentElement.classList.toggle("is-hit", player.hitReaction > 0);
       this.lives.parentElement.setAttribute("aria-label", `${player.lives} de ${CONFIG.maxLives} vidas disponibles`);
@@ -2203,7 +2268,7 @@ kbd {
     }
     announceRegion(text) { this.region.textContent = text; this.regionTimer = 4; this.region.classList.add("region-label--visible"); }
     announceMessage(text, duration = 3) { this.message.textContent = text; this.messageTimer = duration; this.message.classList.add("flight-message--visible"); }
-    reset() { this.region.classList.remove("region-label--visible"); this.message.classList.remove("flight-message--visible"); }
+    reset() { this.renderedLives = -1; this.characterAnnouncement.textContent = ""; this.epilogueAnnouncement.textContent = ""; this.region.classList.remove("region-label--visible"); this.message.classList.remove("flight-message--visible"); }
   }
 
   class Game {
@@ -2233,6 +2298,7 @@ kbd {
       this.approachStartAltitude = 500;
       this.touchdownDone = false;
       this.finalShown = false;
+      this.characterCue = null;
       this.pausedFromState = "PLAYING";
       this.nextLandmark = 0;
       this.raf = 0;
@@ -2270,8 +2336,6 @@ kbd {
       const panelButtons = [...this.root.querySelectorAll("[data-menu-panel]")];
       const menuButtons = [this.root.querySelector("#start-button"), ...panelButtons];
       const views = [...panel.querySelectorAll("[data-menu-view]")];
-      const soundRange = panel.querySelector("#sound-range");
-      const soundStatus = panel.querySelector("#sound-status");
       let opener = null;
 
       const clearSelection = () => panelButtons.forEach(button => button.setAttribute("aria-pressed", "false"));
@@ -2315,7 +2379,6 @@ kbd {
         menuButtons[next].focus();
       });
 
-      soundRange.addEventListener("input", () => { soundStatus.textContent = `Preparado · ${soundRange.value}%`; });
       this.root.classList.toggle("menu-reduce-motion", this.reducedMotion);
     }
 
@@ -2377,6 +2440,15 @@ kbd {
         this.pickups.items.push({ x: this.player.position.x + 235, y: this.player.position.y, baseY: this.player.position.y, phase: 0, vx: -12, collected: false });
         this.pickups.nextSpawnX = this.player.position.x + 2200;
         this.ui.announceRegion("Prueba de vidas extra");
+      } else if (preview === "collision") {
+        this.player.position.x = CONFIG.finalDistance * .52;
+        this.player.position.y = 3500;
+        this.camera.x = this.player.position.x;
+        this.camera.altitude = this.player.position.y;
+        this.progress = .52;
+        this.obstacles.items.push(this.obstacles.createItem("balloon", this.player.position.x + 105, this.player.position.y, getDifficulty(this.progress)));
+        this.obstacles.nextSpawnX = this.player.position.x + 1900;
+        this.ui.announceRegion("Prueba de aviso de impacto");
       } else if (preview === "rocket") {
         this.state = "TRANSFER";
         this.phaseTimer = 0;
@@ -2395,6 +2467,16 @@ kbd {
         this.player.turtleExitProgress = 1;
         this.ui.hideHud();
         this.ui.announceRegion("Luna · Mar de la Tranquilidad");
+      } else if (preview === "epilogue") {
+        this.state = "EPILOGUE";
+        this.phaseTimer = 0;
+        this.progress = 1;
+        this.arrivalSceneProgress = 1;
+        this.missionSceneProgress = 1;
+        this.player.turtleExitProgress = 1;
+        this.ui.hideHud();
+        this.ui.epilogueAnnouncement.textContent = `La gata dice: ${GAME_TEXT.catFinalLine}.`;
+        this.ui.announceRegion("Tierra · Aeropuerto nocturno");
       }
     }
 
@@ -2405,13 +2487,13 @@ kbd {
     reset(playImmediately = false) {
       this.player.reset(); this.camera.reset(); this.obstacles.reset(); this.pickups.reset(); this.particles.clear(); this.ui.reset();
       this.progress = 0; this.phaseTimer = 0; this.arrivalTimer = 0; this.arrivalSceneProgress = 0; this.missionSceneProgress = 0; this.runElapsed = 0;
-      this.arrivalFuel = 100; this.approachStartAltitude = 500; this.touchdownDone = false; this.finalShown = false; this.nextLandmark = 1; this.input.clear();
+      this.arrivalFuel = 100; this.approachStartAltitude = 500; this.touchdownDone = false; this.finalShown = false; this.characterCue = null; this.nextLandmark = 1; this.input.clear();
       this.state = playImmediately ? "PLAYING" : "MENU";
       if (playImmediately) { this.ui.enterGame(); this.ui.announceRegion("La ciudad despierta"); }
     }
 
     isActiveFlightState() {
-      return ["PLAYING", "APPROACH", "LANDING", "TAXI", "ARRIVED", "TRANSFER", "LAUNCH", "MOON"].includes(this.state) && !this.finalShown;
+      return ["PLAYING", "APPROACH", "LANDING", "TAXI", "ARRIVED", "TRANSFER", "LAUNCH", "MOON", "EPILOGUE"].includes(this.state) && !this.finalShown;
     }
 
     togglePause() {
@@ -2428,7 +2510,12 @@ kbd {
       this.root.dataset.gameState = this.state;
       this.root.dataset.runElapsed = this.runElapsed.toFixed(3);
       this.root.dataset.progress = this.progress.toFixed(4);
+      this.root.dataset.cue = this.characterCue?.kind || "";
       if (this.state === "MENU" || this.state === "PAUSED" || this.finalShown) return;
+      if (this.characterCue) {
+        this.characterCue.timer = Math.max(0, this.characterCue.timer - dt);
+        if (this.characterCue.timer <= 0) this.characterCue = null;
+      }
       if (this.state === "PLAYING") {
         this.progress = clamp(this.camera.x / CONFIG.finalDistance, 0, 1);
         this.player.update(dt, this.input.keys, this.progress, this.view.width, true);
@@ -2452,6 +2539,8 @@ kbd {
         this.updateLaunch(dt);
       } else if (this.state === "MOON") {
         this.updateMoon(dt);
+      } else if (this.state === "EPILOGUE") {
+        this.updateEpilogue(dt);
       }
       this.particles.update(dt);
       this.ui.update(this.player, dt, this.progress);
@@ -2467,10 +2556,16 @@ kbd {
 
     handleCollision(item) {
       if (item) item.hit = .34;
+      this.characterCue = {
+        kind: "cat",
+        text: "Ten mucho cuidado,|también hay baches en el cielo",
+        timer: 3.4,
+        duration: 3.4
+      };
       this.camera.hit();
       const point = this.getPlayerScreenPosition();
       this.particles.emit(point.x, point.y, { count: 16, color: "255,204,128", speed: 95, life: .75, size: 4 });
-      this.ui.announceMessage(this.player.lives > 0 ? `Impacto · quedan ${this.player.lives} vidas` : "Sin vidas de reserva · protege el combustible", 2.2);
+      this.ui.characterAnnouncement.textContent = "La gata dice: Ten mucho cuidado, también hay baches en el cielo.";
     }
 
     handleLifePickup(item) {
@@ -2478,7 +2573,10 @@ kbd {
       const x = point.x + (item.x - this.player.position.x);
       const y = this.view.height * .53 - (item.y - this.camera.altitude) * .38;
       this.particles.emit(x, y, { count: this.reducedMotion ? 7 : 18, color: "255,205,104", speed: 76, life: .9, size: 4.5, spread: Math.PI * 2 });
-      this.ui.announceMessage(`Vida extra · ${this.player.lives}/${CONFIG.maxLives}`, 2.1);
+      if (!this.characterCue || this.characterCue.kind !== "cat") {
+        this.characterCue = { kind: "cow", text: "¡Te amuuuuuuuuu!", timer: 2.35, duration: 2.35 };
+      }
+      this.ui.characterAnnouncement.textContent = "La vaca alada dice: ¡Te amuuuuuuuuu!";
     }
 
     beginApproach() {
@@ -2586,7 +2684,18 @@ kbd {
       this.phaseTimer += dt;
       const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.moon, 0, 1);
       this.missionSceneProgress = lerp(.76, 1, phase);
-      if (!this.finalShown && this.phaseTimer >= CONFIG.arrivalDurations.moon) {
+      if (this.phaseTimer >= CONFIG.arrivalDurations.moon) {
+        this.state = "EPILOGUE";
+        this.phaseTimer = 0;
+        this.ui.epilogueAnnouncement.textContent = `La gata dice: ${GAME_TEXT.catFinalLine}.`;
+        this.ui.announceRegion("Tierra · Aeropuerto nocturno");
+      }
+    }
+
+    updateEpilogue(dt) {
+      this.phaseTimer += dt;
+      this.missionSceneProgress = 1;
+      if (!this.finalShown && this.phaseTimer >= CONFIG.arrivalDurations.epilogue) {
         this.finalShown = true;
         this.ui.showEnding();
       }
@@ -2648,7 +2757,7 @@ kbd {
       if (this.state === "MENU") this.progress = menuProgress;
       const shake = this.camera.offset(this.reducedMotion);
       ctx.save(); ctx.translate(shake.x, shake.y);
-      if (["TRANSFER", "LAUNCH", "MOON"].includes(this.state)) {
+      if (["TRANSFER", "LAUNCH", "MOON", "EPILOGUE"].includes(this.state)) {
         this.world.renderMission(ctx, this.view, this);
         this.renderMissionSequence(ctx);
         this.particles.render(ctx);
@@ -2670,6 +2779,7 @@ kbd {
       this.particles.render(ctx);
       this.renderVignette(ctx, w, h);
       ctx.restore();
+      this.renderCharacterCue(ctx, w, h);
       this.progress = actualProgress;
     }
 
@@ -2682,21 +2792,35 @@ kbd {
         this.drawCrewShuttle(ctx, lerp(w*.25,w*.67,smoothstep(.14,.86,phase)), h*.72, phase);
         const turtleX=phase<.28?lerp(w*.26,w*.36,smoothstep(0,.28,phase)):lerp(w*.36,w*.65,smoothstep(.28,.88,phase));
         this.drawMissionTurtle(ctx,turtleX,h*.68,clamp(w/1100,.72,1.05),phase>.82);
-        this.drawRocket(ctx,w*.78,h*.71,0,false);
+        this.drawRocket(ctx,w*.78,h*.71,0,false,false,false);
       } else if (this.state === "LAUNCH") {
         const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.launch, 0, 1);
         const ascent = smoothstep(.12,.92,phase);
         const rocketY=lerp(h*.69,-h*.2,ascent);
-        this.drawRocket(ctx,w*.62,rocketY,phase,true);
+        this.drawRocket(ctx,w*.62,rocketY,phase,true,false,false);
         if(!this.reducedMotion&&phase>.18&&phase<.92){
           ctx.fillStyle=`rgba(255,221,146,${(1-ascent)*.2})`;for(let i=0;i<10;i++){const x=w*.62+Math.sin(i*5.4+this.time*3)*i*3,y=rocketY+112+i*13+Math.sin(this.time*4+i)*4;ctx.beginPath();ctx.arc(x,y,4+i*.7,0,Math.PI*2);ctx.fill();}
         }
       } else if (this.state === "MOON") {
         const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.moon,0,1);
-        this.drawRocket(ctx,w*.3,h*.7,1,false,true);
-        const turtleX=lerp(w*.39,w*.58,smoothstep(.12,.78,phase));
-        this.drawMissionTurtle(ctx,turtleX,h*.72,clamp(w/930,.8,1.25),phase>.72);
-        if(phase>.48){ctx.save();ctx.globalAlpha=smoothstep(.48,.82,phase);ctx.fillStyle="#ffe7a1";ctx.font=`800 ${clamp(w*.018,14,24)}px Segoe UI, sans-serif`;ctx.textAlign="center";ctx.fillText("UN PEQUEÑO PASO, UNA GRAN AVENTURA",w*.57,h*.84);ctx.restore();}
+        this.drawRocket(ctx,w*.3,h*.7,1,false,true,false);
+        if(phase>.36){ctx.save();ctx.globalAlpha=smoothstep(.36,.66,phase);ctx.fillStyle="#ffe7a1";ctx.strokeStyle="#151b34";ctx.lineWidth=5;ctx.font=`950 ${clamp(w*.021,16,28)}px Segoe UI, sans-serif`;ctx.textAlign="center";ctx.strokeText("¿DÓNDE ESTÁ TORTU EITAN?",w*.58,h*.82);ctx.fillText("¿DÓNDE ESTÁ TORTU EITAN?",w*.58,h*.82);ctx.restore();}
+        if (!this.reducedMotion && phase > .78) { ctx.fillStyle=`rgba(0,0,0,${smoothstep(.78,1,phase)})`; ctx.fillRect(0,0,w,h); }
+      } else if (this.state === "EPILOGUE") {
+        const phase = clamp(this.phaseTimer / CONFIG.arrivalDurations.epilogue,0,1);
+        const enter = smoothstep(.04,.25,phase);
+        const scale = clamp(w/1040,.72,1.12);
+        const turtleX = this.reducedMotion ? w*.41 : lerp(w*.25,w*.41,enter);
+        const catX = this.reducedMotion ? w*.63 : lerp(w*.77,w*.63,enter);
+        this.drawSuitcase(ctx,turtleX-54*scale,h*.73,scale);
+        this.drawMissionTurtle(ctx,turtleX,h*.69,scale,phase>.7);
+        this.drawCompanionCat(ctx,catX,h*.69,scale,phase);
+        if(phase>.25){
+          const bubbleAlpha=smoothstep(.25,.38,phase)*smoothstep(1,.88,phase);
+          this.drawSpeechBubble(ctx,w*.5,h*.39,Math.min(470,w-28),106,["La tortuga nunca llegará","a la luna"],"right",bubbleAlpha);
+        }
+        const fade = 1-smoothstep(0,.16,phase);
+        if(fade>0){ctx.fillStyle=`rgba(0,0,0,${fade})`;ctx.fillRect(0,0,w,h);}
       }
     }
 
@@ -2709,14 +2833,15 @@ kbd {
       ctx.fillStyle="#ffcc67";ctx.font="800 8px Segoe UI, sans-serif";ctx.textAlign="center";ctx.fillText("EA · MISIÓN LUNAR",0,-2);ctx.restore();
     }
 
-    drawRocket(ctx,x,y,phase,launching,landed=false){
+    drawRocket(ctx,x,y,phase,launching,landed=false,showPassenger=false){
       const scale=clamp(this.view.width/1080,.68,1.08);ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
       if(landed){ctx.strokeStyle="#7c8793";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-18,62);ctx.lineTo(-42,88);ctx.moveTo(18,62);ctx.lineTo(42,88);ctx.stroke();}
       if(launching&&phase>.1){const flame=ctx.createLinearGradient(0,58,0,130);flame.addColorStop(0,"#fff6bd");flame.addColorStop(.42,"#ffad4f");flame.addColorStop(1,"rgba(231,72,67,0)");ctx.fillStyle=flame;ctx.shadowColor="#ffb24e";ctx.shadowBlur=20;ctx.beginPath();ctx.moveTo(-15,55);ctx.quadraticCurveTo(-20,94,0,132+(this.reducedMotion?0:Math.sin(this.time*18)*8));ctx.quadraticCurveTo(20,94,15,55);ctx.fill();ctx.shadowBlur=0;}
       const shell=ctx.createLinearGradient(-24,0,26,0);shell.addColorStop(0,"#8ca0ad");shell.addColorStop(.3,"#f6faf8");shell.addColorStop(.72,"#dce5e8");shell.addColorStop(1,"#728796");ctx.fillStyle=shell;ctx.strokeStyle="#263a4b";ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(-23,56);ctx.lineTo(-23,-14);ctx.quadraticCurveTo(0,-68,23,-14);ctx.lineTo(23,56);ctx.closePath();ctx.fill();ctx.stroke();
       ctx.fillStyle="#2a8f9b";ctx.fillRect(-22,21,44,10);ctx.fillStyle="#d6a94e";ctx.fillRect(-22,34,44,4);
       ctx.fillStyle="#304b61";ctx.beginPath();ctx.arc(0,-4,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#e8bd5e";ctx.lineWidth=2;ctx.stroke();
-      ctx.save();ctx.beginPath();ctx.arc(0,-4,9,0,Math.PI*2);ctx.clip();ctx.fillStyle="#8fbb78";ctx.beginPath();ctx.arc(1,-2,5.2,0,Math.PI*2);ctx.fill();ctx.fillStyle="#527b58";ctx.beginPath();ctx.ellipse(-2,3,7,5,-.1,0,Math.PI*2);ctx.fill();ctx.fillStyle="#1b2c2b";ctx.beginPath();ctx.arc(3,-3,1,0,Math.PI*2);ctx.fill();ctx.restore();
+      if(showPassenger){ctx.save();ctx.beginPath();ctx.arc(0,-4,9,0,Math.PI*2);ctx.clip();ctx.fillStyle="#8fbb78";ctx.beginPath();ctx.arc(1,-2,5.2,0,Math.PI*2);ctx.fill();ctx.fillStyle="#527b58";ctx.beginPath();ctx.ellipse(-2,3,7,5,-.1,0,Math.PI*2);ctx.fill();ctx.fillStyle="#1b2c2b";ctx.beginPath();ctx.arc(3,-3,1,0,Math.PI*2);ctx.fill();ctx.restore();}
+      else{ctx.fillStyle="#13263b";ctx.beginPath();ctx.arc(0,-4,7.8,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(131,219,229,.42)";ctx.beginPath();ctx.arc(-2,-6,2.5,0,Math.PI*2);ctx.fill();}
       ctx.fillStyle="#a8b9c2";ctx.beginPath();ctx.moveTo(-23,28);ctx.lineTo(-43,62);ctx.lineTo(-22,53);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(23,28);ctx.lineTo(43,62);ctx.lineTo(22,53);ctx.closePath();ctx.fill();
       ctx.fillStyle="#e5b753";ctx.beginPath();ctx.arc(0,-31,4,0,Math.PI*2);ctx.fill();ctx.restore();
     }
@@ -2728,6 +2853,82 @@ kbd {
       ctx.strokeStyle="rgba(225,210,104,.5)";ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(-14,-2);ctx.quadraticCurveTo(0,-14,14,-1);ctx.moveTo(-13,5);ctx.quadraticCurveTo(0,-6,13,6);ctx.stroke();
       ctx.fillStyle="#91bd78";ctx.beginPath();ctx.arc(19,-5,9,0,Math.PI*2);ctx.fill();ctx.fillStyle="#192c28";ctx.beginPath();ctx.arc(22,-7,1.6,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff4bf";ctx.beginPath();ctx.arc(22.5,-7.5,.5,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle="#769c69";ctx.lineWidth=5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-11,11);ctx.lineTo(-14+step*.2,18);ctx.moveTo(9,11);ctx.lineTo(13-step*.2,18);ctx.moveTo(15,1);ctx.lineTo(waving?27:22,waving?-15:6);ctx.stroke();
+      ctx.restore();
+    }
+
+    drawSuitcase(ctx,x,y,scale=1){
+      ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+      ctx.strokeStyle="#111c31";ctx.lineWidth=4;ctx.fillStyle="#c9684f";
+      ctx.beginPath();ctx.roundRect(-24,-26,48,34,7);ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#efb955";ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(-10,-36,20,13,5);ctx.stroke();
+      ctx.fillStyle="#f3c768";ctx.fillRect(-19,-18,38,5);ctx.fillStyle="#29495d";ctx.beginPath();ctx.arc(-15,12,5,0,Math.PI*2);ctx.arc(15,12,5,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+
+    drawCompanionCat(ctx,x,y,scale=1,phase=0){
+      const tailWave=this.reducedMotion?0:Math.sin(this.time*3.4+phase)*8;
+      const blink=!this.reducedMotion&&Math.sin(this.time*.92)> .985;
+      ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.lineJoin="round";ctx.lineCap="round";
+      ctx.strokeStyle="#0c1020";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(20,9);ctx.bezierCurveTo(51,18+tailWave,54,-22,35,-35);ctx.stroke();
+      ctx.strokeStyle="#3b455d";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(20,9);ctx.bezierCurveTo(51,18+tailWave,54,-22,35,-35);ctx.stroke();
+      const body=ctx.createRadialGradient(-10,-24,3,0,-7,37);body.addColorStop(0,"#4d5268");body.addColorStop(.44,"#202536");body.addColorStop(1,"#0f1322");
+      ctx.fillStyle=body;ctx.strokeStyle="#0b0f1d";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,0,27,38,-.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle="#171b2b";ctx.beginPath();ctx.arc(0,-42,27,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-21,-56);ctx.lineTo(-16,-77);ctx.lineTo(-4,-61);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(8,-62);ctx.lineTo(20,-78);ctx.lineTo(22,-55);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#d7a13f";ctx.beginPath();ctx.arc(-14,-25,3.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(12,8,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(-7,18,2.3,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#efbe48";ctx.lineWidth=blink?4:2.5;[-10,10].forEach(ex=>{ctx.beginPath();ctx.moveTo(ex-5,-45);ctx.quadraticCurveTo(ex,-49,ex+5,-45);ctx.stroke();});
+      if(!blink){ctx.fillStyle="#101522";[-10,10].forEach(ex=>{ctx.beginPath();ctx.ellipse(ex,-45,1.7,4,0,0,Math.PI*2);ctx.fill();});}
+      ctx.fillStyle="#d78878";ctx.beginPath();ctx.moveTo(-3,-36);ctx.lineTo(3,-36);ctx.lineTo(0,-32);ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#8be1d5";ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,-18,19,.18,Math.PI-.18);ctx.stroke();
+      ctx.fillStyle="#f0c45d";ctx.strokeStyle="#111c31";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,1,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+
+    drawWingedCow(ctx,x,y,scale=1,phase=0,carryingHeart=true){
+      const flap=this.reducedMotion?-.08:Math.sin(phase*2.6)*.22;
+      ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.lineJoin="round";ctx.lineCap="round";
+      ctx.save();ctx.translate(-22,-8);ctx.rotate(-.28-flap);ctx.fillStyle="#dff5ee";ctx.strokeStyle="#111c31";ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(0,7);ctx.quadraticCurveTo(-27,-21,-38,-7);ctx.quadraticCurveTo(-24,-1,-17,15);ctx.quadraticCurveTo(-8,3,0,7);ctx.fill();ctx.stroke();ctx.restore();
+      ctx.save();ctx.translate(20,-8);ctx.rotate(.28+flap);ctx.fillStyle="#dff5ee";ctx.strokeStyle="#111c31";ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(0,7);ctx.quadraticCurveTo(27,-21,38,-7);ctx.quadraticCurveTo(24,-1,17,15);ctx.quadraticCurveTo(8,3,0,7);ctx.fill();ctx.stroke();ctx.restore();
+      const body=ctx.createLinearGradient(0,-20,0,20);body.addColorStop(0,"#fff3c9");body.addColorStop(1,"#d8d3b9");ctx.fillStyle=body;ctx.strokeStyle="#111c31";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(-5,0,31,21,-.06,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle="#26354a";ctx.beginPath();ctx.ellipse(-15,-7,9,7,.4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(3,9,8,5,-.3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#fff0bd";ctx.strokeStyle="#111c31";ctx.lineWidth=4;ctx.beginPath();ctx.arc(26,-2,17,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle="#efb85d";ctx.beginPath();ctx.moveTo(16,-15);ctx.lineTo(12,-26);ctx.lineTo(21,-18);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(34,-15);ctx.lineTo(40,-25);ctx.lineTo(39,-13);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#f0a497";ctx.beginPath();ctx.ellipse(31,6,15,9,-.05,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle="#6d3d4a";ctx.beginPath();ctx.arc(27,5,1.7,0,Math.PI*2);ctx.arc(36,5,1.7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#111c31";ctx.beginPath();ctx.arc(22,-5,2.2,0,Math.PI*2);ctx.arc(33,-6,2.2,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(21.4,-5.7,.8,0,Math.PI*2);ctx.arc(32.4,-6.7,.8,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#111c31";ctx.lineWidth=4;[-18,4].forEach(lx=>{ctx.beginPath();ctx.moveTo(lx,16);ctx.lineTo(lx-2,28);ctx.stroke();});
+      if(carryingHeart){ctx.strokeStyle="#f0bd55";ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(-4,18);ctx.lineTo(-4,27);ctx.stroke();ctx.fillStyle="#ff6f61";ctx.strokeStyle="#7c302e";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-4,46);ctx.bezierCurveTo(-24,31,-15,20,-4,29);ctx.bezierCurveTo(7,20,16,31,-4,46);ctx.fill();ctx.stroke();}
+      ctx.restore();
+    }
+
+    drawSpeechBubble(ctx,x,y,width,height,lines,tailSide="right",alpha=1){
+      if(alpha<=0)return;ctx.save();ctx.globalAlpha=clamp(alpha,0,1);ctx.translate(x,y);ctx.shadowColor="rgba(7,15,29,.5)";ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+      ctx.fillStyle="#fff0bd";ctx.strokeStyle="#111c31";ctx.lineWidth=5;ctx.beginPath();ctx.roundRect(-width/2,-height/2,width,height,16);ctx.fill();ctx.stroke();ctx.shadowColor="transparent";
+      const tailX=tailSide==="right"?width*.31:-width*.31;ctx.beginPath();ctx.moveTo(tailX-18,height/2-2);ctx.lineTo(tailX+10,height/2+25);ctx.lineTo(tailX+23,height/2-2);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#18233b";ctx.font=`950 ${clamp(width*.045,13,20)}px Segoe UI, sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+      lines.forEach((line,index)=>ctx.fillText(line,0,(index-(lines.length-1)/2)*27));ctx.restore();
+    }
+
+    renderCharacterCue(ctx,w,h){
+      const cue=this.characterCue;if(!cue)return;
+      const elapsed=cue.duration-cue.timer;
+      const alpha=smoothstep(0,.16,elapsed)*smoothstep(0,.18,cue.timer);
+      if(alpha<=0)return;
+      const compact=w<620;
+      const scale=clamp(w/1050,.7,1);
+      ctx.save();ctx.globalAlpha=alpha;
+      if(cue.kind==="cat"){
+        const catX=compact?w*.82:w-92*scale;
+        const catY=compact?h*.66:h*.69;
+        const slide=this.reducedMotion?0:lerp(16,0,smoothstep(0,.22,elapsed));
+        this.drawCompanionCat(ctx,catX+slide,catY,scale,elapsed);
+        this.drawSpeechBubble(ctx,compact?w*.47:w-Math.min(310,w*.27),compact?h*.34:h*.48,Math.min(370,w-24),compact?104:96,["Ten mucho cuidado,","también hay baches en el cielo"],"right",1);
+      }else{
+        const cowX=compact?w*.2:90*scale;
+        const cowY=compact?h*.59:h*.63;
+        const lift=this.reducedMotion?0:Math.sin(this.time*4)*4;
+        this.drawWingedCow(ctx,cowX,cowY+lift,scale*.9,this.time,true);
+        this.drawSpeechBubble(ctx,compact?w*.58:Math.min(310,w*.29),compact?h*.34:h*.5,Math.min(300,w-24),82,["¡Te amuuuuuuuuu!"],"left",1);
+      }
       ctx.restore();
     }
 
@@ -2783,12 +2984,9 @@ kbd {
     drawLifePickup(ctx, item, x, y) {
       const pulse = this.reducedMotion ? 1 : 1 + Math.sin(item.phase * 1.7) * .07;
       ctx.save();ctx.translate(x,y);ctx.scale(pulse,pulse);
-      const aura=ctx.createRadialGradient(0,0,4,0,0,43);aura.addColorStop(0,"rgba(255,229,139,.58)");aura.addColorStop(.58,"rgba(99,220,212,.18)");aura.addColorStop(1,"rgba(99,220,212,0)");ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,43,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#265965";ctx.strokeStyle="#111c31";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(20,-13);ctx.lineTo(18,12);ctx.quadraticCurveTo(0,31,-18,12);ctx.lineTo(-20,-13);ctx.closePath();ctx.fill();ctx.stroke();
-      ctx.strokeStyle="#e6b956";ctx.lineWidth=2;ctx.stroke();
-      ctx.strokeStyle="rgba(119,230,224,.78)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(14,-10);ctx.lineTo(12,9);ctx.quadraticCurveTo(0,22,-12,9);ctx.lineTo(-14,-10);ctx.closePath();ctx.stroke();
-      ctx.fillStyle="#ffcd69";ctx.shadowColor="#ffcd69";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(0,13);ctx.bezierCurveTo(-21,-1,-12,-15,0,-7);ctx.bezierCurveTo(12,-15,21,-1,0,13);ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle="#fff3bf";ctx.font="800 9px Segoe UI, sans-serif";ctx.textAlign="center";ctx.fillText("+1",0,27);
+      const aura=ctx.createRadialGradient(0,0,5,0,0,58);aura.addColorStop(0,"rgba(255,229,139,.58)");aura.addColorStop(.58,"rgba(99,220,212,.2)");aura.addColorStop(1,"rgba(99,220,212,0)");ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,58,0,Math.PI*2);ctx.fill();
+      this.drawWingedCow(ctx,-4,-7,.78,item.phase,true);
+      ctx.fillStyle="#fff0bd";ctx.strokeStyle="#111c31";ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(-31,34,62,20,6);ctx.fill();ctx.stroke();ctx.fillStyle="#18233b";ctx.font="950 10px Segoe UI, sans-serif";ctx.textAlign="center";ctx.fillText("+1 VIDA",0,48);
       ctx.restore();
     }
 
