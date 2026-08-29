@@ -36,6 +36,19 @@ La aplicación se mantiene sin frameworks de interfaz ni motores externos. La ed
 | Consola | 0 errores después de la actualización game-art |
 | Build y versión autocontenida | Implementados y validados |
 
+### Parche visual game-art — Dirección A + fondo B
+
+La selección aprobada mezcla la interfaz **Riveted Pop** de la Dirección A con el hangar pintado de la Dirección B. La traducción a producción se aplicó a todo el juego:
+
+- menú como escenario, con carteles suspendidos y remaches en lugar de botones web;
+- logo volumétrico, paneles de mantenimiento y estados hover/focus/pressed;
+- HUD reconstruido como instrumentos físicos compactos;
+- paleta más viva, contornos oscuros, iluminación cálida y profundidad por capas;
+- avión comercial ampliado visualmente sin ampliar su hitbox, con cockpit y pasajera más legibles;
+- obstáculos con silueta, borde, color y efectos de impacto más claros;
+- avisos laterales y medidor de etapa para comunicar la dificultad sin saturar la escena;
+- paneles funcionales de Cómo jugar, Ajustes y Créditos, incluido un espacio editable para los créditos definitivos.
+
 ## 3. Tecnologías y lenguajes
 
 | Tecnología | Uso |
@@ -121,7 +134,7 @@ D:\HTML\Escuela de aviación\
 - **`ObstacleManager`:** generación por etapas, velocidad propia, parejas espaciadas, control de repetición, trayectorias, limpieza y colisión mundial.
 - **`PickupManager`:** distribución determinista, movimiento, colisión y recogida de escudos de vida extra.
 - **`ParticleSystem`:** partículas livianas de impacto y motor.
-- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno multicapa, landmarks, aeropuerto, centro espacial y superficie lunar.
+- **`WorldRenderer`:** cielo, estrellas, Luna, nubes, terreno multicapa, landmarks, aeropuerto, centro espacial, superficie lunar y primer plano con parallax/luces de ruta.
 - **`PlaneRenderer`:** dibuja un avión comercial original con motores, ventanas iluminadas, cockpit ampliado, piloto, tortuga pasajera, tren y puerta; representa el estado sin controlar la física.
 - **`UIManager`:** HUD, mensajes, regiones y overlays.
 - **`Game`:** ciclo de vida, estados, límites, progresión, render y coordinación.
@@ -196,10 +209,10 @@ render y colisiones alineadas
 
 ## 11. Sistemas preservados
 
-- Siete tipos de obstáculos con dificultad escalada por `progress`.
+- Siete tipos de obstáculos con dificultad escalada por `progress`, combinaciones de dos elementos y avisos anticipados.
 - Tres vidas iniciales, máximo cinco y pickups de vida extra.
 - Penalización de 11 puntos de combustible por impacto.
-- Invulnerabilidad temporal de 1.8 segundos.
+- Invulnerabilidad temporal de 1.65 segundos.
 - Shake, partículas y mensaje de colisión.
 - Consumo continuo de combustible.
 - Progresión y landmarks.

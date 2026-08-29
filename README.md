@@ -2,6 +2,8 @@
 
 Minijuego 2D de vuelo hecho con HTML5, CSS3, JavaScript vanilla y Canvas. Una capitana recorre el mundo de noche con una tortuga como pasajera; tras aterrizar, la tortuga continúa hacia un centro espacial y completa la misión en la Luna. El menú principal es un hangar ilustrado game-art con la piloto y su elegante gata negra.
 
+La dirección visual actual combina **señalética remachada y expresiva** con un **aeródromo nocturno pintado**: contornos gruesos, colores cálidos, paneles físicos, volumen, textura sutil y una jerarquía propia de videojuego arcade.
+
 ## Abrir el juego
 
 No necesitas instalar nada para jugar:
@@ -57,10 +59,11 @@ La misión completa fue cronometrada en **86,092 s de tiempo de juego**, desde C
 ### Dificultad y obstáculos
 
 - `getDifficulty(progress)` centraliza velocidad propia, separación, amplitud, intensidad visual y probabilidad de parejas.
-- `CONFIG.obstacleGap`, `obstacleSpeed` y `obstacleAmplitude` definen sus rangos.
+- `CONFIG.obstacleGap` usa actualmente `300–820`, `obstacleSpeed` `52–195` y `obstacleAmplitude` `18–96`.
 - `ObstacleManager.chooseType()` decide qué aparece en cada capa de altura.
-- `ObstacleManager.update()` controla progresión, trayectorias, generación adelantada, reciclaje y colisiones.
+- `ObstacleManager.update()` controla progresión, trayectorias, generación adelantada, parejas escalonadas/puertas seguras, reciclaje y colisiones.
 - `OBSTACLE_INFO` contiene los radios de colisión; son deliberadamente menores que el dibujo visual.
+- El HUD identifica las etapas `DESPEGUE`, `RUTA`, `ALTURA`, `INTENSA` y `APROXIMACIÓN`, y las flechas de aviso anticipan amenazas que entran por el borde derecho.
 
 ### Vidas y pickups
 
