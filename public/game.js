@@ -17,15 +17,15 @@
     cruiseSpeed: 174,
     routeSpeedBoost: 36,
     arrivalDurations: Object.freeze({ approach: 3.2, landing: 4, taxi: 3.2, disembark: 4.2, transfer: 4.5, launch: 5.5, moon: 4 }),
-    obstacleGap: [365, 980],
-    obstacleSpeed: [38, 172],
-    obstacleAmplitude: [16, 108],
+    obstacleGap: [300, 820],
+    obstacleSpeed: [52, 195],
+    obstacleAmplitude: [18, 96],
     approachClearAt: 0.9,
     collisionFuelLoss: 11,
-    invulnerabilitySeconds: 1.8,
+    invulnerabilitySeconds: 1.65,
     startingLives: 3,
     maxLives: 5,
-    lifePickupGap: [1850, 2450]
+    lifePickupGap: [2600, 3300]
   });
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -38,13 +38,19 @@
   const rgba = (color, alpha = 1) => `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
   const getDifficulty = progress => {
     const level = smoothstep(.04, .88, clamp(progress, 0, 1));
+    const stage = progress < .2 ? "DESPEGUE" : progress < .45 ? "RUTA" : progress < .7 ? "ALTURA" : progress < .9 ? "INTENSA" : "APROXIMACIÓN";
     return {
       level,
+      stage,
       obstacleSpeed: lerp(CONFIG.obstacleSpeed[0], CONFIG.obstacleSpeed[1], level),
       spawnGap: lerp(CONFIG.obstacleGap[1], CONFIG.obstacleGap[0], level),
       movementAmplitude: lerp(CONFIG.obstacleAmplitude[0], CONFIG.obstacleAmplitude[1], level),
-      pairChance: smoothstep(.34, .82, progress) * .42,
-      visualIntensity: lerp(.72, 1.18, level)
+      pairChance: smoothstep(.3, .82, progress) * .56,
+      warningLead: lerp(280, 390, level),
+      maxActive: progress < .35 ? 3 : 4,
+      patternEvery: progress < .45 ? 3 : progress < .7 ? 3 : 2,
+      safeCorridor: lerp(54, 46, level),
+      visualIntensity: lerp(.96, 1.18, level)
     };
   };
 
@@ -247,7 +253,14 @@
 
   class ObstacleManager {
     constructor() { this.reset(); }
-    reset() { this.items = []; this.nextSpawnX = 900; this.random = new SeededRandom(9031); this.lastType = ""; this.repeatCount = 0; }
+    reset() {
+      this.items = [];
+      this.nextSpawnX = 760;
+      this.random = new SeededRandom(9031);
+      this.lastType = "";
+      this.repeatCount = 0;
+      this.encountersSincePattern = 0;
+    }
     chooseType(progress) {
       const roll = this.random.next();
       if (progress < .2) return roll < .56 ? "bird" : roll < .82 ? "balloon" : "flock";
@@ -284,6 +297,8 @@
         amplitude: difficulty.movementAmplitude * amplitudeFactor,
         frequency: type === "bird" || type === "flock" ? this.random.range(2.35, 3.65) : this.random.range(.62, 1.18),
         intensity: difficulty.visualIntensity,
+        hit: 0,
+        pattern: "single",
         passed: false
       };
     }
@@ -297,16 +312,33 @@
         const type = this.selectType(progress);
         const altitudeSpread = progress < .2 ? 430 : progress < .65 ? 700 : 900;
         const y = clamp(player.position.y + this.random.range(-altitudeSpread, altitudeSpread), CONFIG.minAltitude + 60, CONFIG.maxAltitude - 100);
-        this.items.push(this.createItem(type, this.nextSpawnX, y, difficulty));
-        if (progress > .38 && progress < .86 && this.random.next() < difficulty.pairChance) {
+        const lead = this.createItem(type, this.nextSpawnX, y, difficulty);
+        this.items.push(lead);
+        this.encountersSincePattern += 1;
+        const patternReady = progress > .3 && progress < .86 && this.encountersSincePattern >= difficulty.patternEvery;
+        const addPartner = progress > .34 && progress < .86 && (patternReady || this.random.next() < difficulty.pairChance);
+        if (addPartner) {
           const partnerType = this.random.next() < .58 ? type : this.selectType(progress);
-          const direction = y > player.position.y ? -1 : 1;
-          const partnerY = clamp(y + direction * this.random.range(410, 620), CONFIG.minAltitude + 80, CONFIG.maxAltitude - 120);
-          this.items.push(this.createItem(partnerType, this.nextSpawnX + this.random.range(130, 230), partnerY, difficulty));
+          const leadRadius = OBSTACLE_INFO[type].radius + 26;
+          const partnerRadius = OBSTACLE_INFO[partnerType].radius + 26;
+          const separation = clamp((leadRadius + partnerRadius + difficulty.safeCorridor) / .38, 470, 720);
+          let direction = y > player.position.y ? -1 : 1;
+          let partnerY = y + direction * separation;
+          if (partnerY < CONFIG.minAltitude + 90 || partnerY > CONFIG.maxAltitude - 130) {
+            direction *= -1;
+            partnerY = y + direction * separation;
+          }
+          partnerY = clamp(partnerY, CONFIG.minAltitude + 90, CONFIG.maxAltitude - 130);
+          const partner = this.createItem(partnerType, this.nextSpawnX + this.random.range(165, 255), partnerY, difficulty);
+          lead.pattern = patternReady ? "gate" : "staggered";
+          partner.pattern = lead.pattern;
+          this.items.push(partner);
+          this.encountersSincePattern = 0;
         }
         this.nextSpawnX += difficulty.spawnGap * this.random.range(.86, 1.13);
       }
       this.items.forEach(item => {
+        item.hit = Math.max(0, item.hit - dt);
         item.x += item.vx * dt;
         item.baseY += item.vy * dt;
         if (item.baseY < CONFIG.minAltitude + 80 || item.baseY > CONFIG.maxAltitude - 120) item.vy *= -1;
@@ -405,20 +437,21 @@
       this.drawTerrain(ctx, w, h, sceneProgress, game.camera.x, game.time);
       if (arrival < .04) this.drawLandmarks(ctx, w, h, progress, game.camera.x);
       this.drawCloudLayer(ctx, w, h, sceneProgress, game.camera, game.time, 1);
+      if (arrival < .04) this.drawForeground(ctx, w, h, sceneProgress, game.camera.x, game.time);
       if (arrival > .02) this.drawAirport(ctx, w, h, arrival, game.arrivalTimer, game.state, game.reducedMotion);
     }
 
     drawSky(ctx, w, h, progress, altitudeRatio) {
       const space = smoothstep(.52, .94, Math.max(progress, altitudeRatio));
-      const top = mixColor([7, 26, 62], [1, 4, 18], space);
-      const bottom = mixColor([42, 63, 116], [12, 18, 48], space);
+      const top = mixColor([15, 39, 83], [2, 6, 24], space);
+      const bottom = mixColor([73, 85, 146], [21, 24, 62], space);
       const gradient = ctx.createLinearGradient(0, 0, 0, h);
       gradient.addColorStop(0, rgba(top));
       gradient.addColorStop(.68, rgba(bottom));
-      gradient.addColorStop(1, rgba(mixColor(bottom, [97, 48, 98], 1 - space), 1));
+      gradient.addColorStop(1, rgba(mixColor(bottom, [198, 92, 82], (1 - space) * .68), 1));
       ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
       const glow = ctx.createRadialGradient(w * .7, h * .58, 0, w * .7, h * .58, w * .7);
-      glow.addColorStop(0, `rgba(99,210,226,${(1 - space) * .19})`); glow.addColorStop(.48, `rgba(106,88,190,${(1 - space) * .11})`); glow.addColorStop(1, "rgba(0,0,0,0)");
+      glow.addColorStop(0, `rgba(104,218,203,${(1 - space) * .2})`); glow.addColorStop(.48, `rgba(242,157,86,${(1 - space) * .1})`); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
     }
 
@@ -499,9 +532,9 @@
       const base = lerp(h * .78, h * 1.18, smoothstep(.25, .6, progress));
       ctx.save(); ctx.globalAlpha = visibility;
       const layers = [
-        { step: 92, lift: 112, color: "#23345c", alpha: .48, depth: .012 },
-        { step: 74, lift: 76, color: "#182948", alpha: .72, depth: .021 },
-        { step: 62, lift: 49, color: "#101d37", alpha: 1, depth: .034 }
+        { step: 104, lift: 126, color: "#3f6680", alpha: .5, depth: .012 },
+        { step: 82, lift: 84, color: "#28656a", alpha: .78, depth: .022 },
+        { step: 67, lift: 53, color: "#17444c", alpha: 1, depth: .038 }
       ];
       layers.forEach((layer, layerIndex) => {
         const offset = -((cameraX * layer.depth) % layer.step) - layer.step;
@@ -542,7 +575,10 @@
         const x = w * .5 + delta * w * 5.2;
         if (x < -180 || x > w + 180 || progress > .62) return;
         const alpha = clamp(1 - Math.abs(delta) * 5.5, 0, 1) * (1 - smoothstep(.52, .63, progress));
-        ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, ground); ctx.fillStyle = "#1d3154"; ctx.strokeStyle = "rgba(116,188,213,.42)"; ctx.lineWidth = 3;
+        const accents = { city: "#50b6aa", eiffel: "#f0bd54", pyramids: "#df8a4e", liberty: "#55b89d", christ: "#65a86c", fuji: "#df7890", coast: "#5bc6c9" };
+        ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, ground); ctx.fillStyle = "#1d3154"; ctx.strokeStyle = "rgba(15,28,49,.78)"; ctx.lineWidth = 4;
+        ctx.fillStyle = `${accents[landmark.type] || "#5bc6c9"}42`;
+        ctx.beginPath(); ctx.ellipse(0, -40, 145, 92, 0, 0, Math.PI * 2); ctx.fill();
         ctx.shadowColor = "rgba(74,169,207,.24)"; ctx.shadowBlur = 18;
         this.drawLandmarkShape(ctx, landmark.type);
         ctx.restore();
@@ -597,6 +633,31 @@
       ctx.ellipse(x - size * .52, y, size * .55, size * .25, 0, 0, Math.PI * 2);
       ctx.ellipse(x, y - size * .18, size * .68, size * .42, 0, 0, Math.PI * 2);
       ctx.ellipse(x + size * .55, y, size * .58, size * .28, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = `rgba(29,43,76,${alpha * .7})`; ctx.lineWidth = Math.max(1.5, size * .035); ctx.stroke();
+    }
+
+    drawForeground(ctx, w, h, progress, cameraX, time) {
+      const visibility = 1 - smoothstep(.5, .68, progress);
+      if (visibility <= .01) return;
+      ctx.save();
+      ctx.globalAlpha = visibility;
+      const groundY = h * .91;
+      const offset = -((cameraX * .075) % 118) - 118;
+      ctx.fillStyle = "rgba(11,41,48,.78)";
+      ctx.beginPath(); ctx.moveTo(-120, h);
+      for (let x = offset; x < w + 140; x += 118) {
+        const height = 34 + Math.sin(x * .041 + time * .18) * 12;
+        ctx.quadraticCurveTo(x + 36, groundY - height, x + 78, groundY - 8);
+      }
+      ctx.lineTo(w + 140, h); ctx.closePath(); ctx.fill();
+      for (let x = offset + 48; x < w + 120; x += 118) {
+        const glow = .55 + Math.sin(time * 1.4 + x) * .18;
+        ctx.fillStyle = `rgba(255,196,80,${glow})`;
+        ctx.fillRect(x, groundY - 21, 5, 13);
+        ctx.fillStyle = "rgba(16,32,45,.9)";
+        ctx.fillRect(x - 2, groundY - 8, 9, 22);
+      }
+      ctx.restore();
     }
 
     renderMission(ctx, view, game) {
@@ -730,7 +791,7 @@
       const hitFlash = player.hitReaction > 0 && Math.floor(player.hitReaction * 16) % 2 === 0;
       // La silueta crece solo de forma visual: la hitbox de Player permanece
       // deliberadamente más pequeña para conservar las colisiones justas.
-      const scale = clamp(viewWidth / 480, .9, 1.08);
+      const scale = clamp(viewWidth / 520, .9, 1.24);
       const visualPitch = clamp(player.rotation, -.22, .2);
       ctx.save(); ctx.translate(x, y); ctx.rotate(visualPitch); ctx.scale(scale, scale);
       if (player.invulnerability > 0 && Math.floor(player.invulnerability * 12) % 2 === 0) ctx.globalAlpha = .48;
@@ -740,11 +801,12 @@
       ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 15; ctx.shadowOffsetY = 10;
 
       ctx.fillStyle = hitFlash ? "#fff" : "#aab9c7";
-      ctx.beginPath(); ctx.moveTo(-65,-8); ctx.lineTo(-79,-44); ctx.lineTo(-64,-43); ctx.lineTo(-42,-7); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#21354a"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-65,-8); ctx.lineTo(-79,-44); ctx.lineTo(-64,-43); ctx.lineTo(-42,-7); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = hitFlash ? "#fff" : "#b7c5d0";
-      ctx.beginPath(); ctx.moveTo(-61,5); ctx.lineTo(-82,21); ctx.lineTo(-52,18); ctx.lineTo(-28,6); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-61,5); ctx.lineTo(-82,21); ctx.lineTo(-52,18); ctx.lineTo(-28,6); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = hitFlash ? "#fff" : "#91a6b8";
-      ctx.beginPath(); ctx.moveTo(-12,-6); ctx.lineTo(22,-43); ctx.lineTo(43,-42); ctx.lineTo(20,-3); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-12,-6); ctx.lineTo(22,-43); ctx.lineTo(43,-42); ctx.lineTo(20,-3); ctx.closePath(); ctx.fill(); ctx.stroke();
       this.drawLandingGear(ctx, player.gearProgress);
 
       const body = ctx.createLinearGradient(0,-20,0,22);
@@ -758,7 +820,7 @@
       ctx.quadraticCurveTo(70,21,-48,18); ctx.lineTo(-82,7); ctx.closePath(); ctx.fill();
       ctx.shadowColor = "transparent";
 
-      ctx.strokeStyle = hitFlash ? "#fff" : "rgba(35,66,88,.72)"; ctx.lineWidth = 2;
+      ctx.strokeStyle = hitFlash ? "#fff" : "#21384d"; ctx.lineWidth = 3.2;
       ctx.stroke();
       ctx.strokeStyle = hitFlash ? "rgba(255,255,255,.9)" : "#2a8f9b"; ctx.lineWidth = 3.4;
       ctx.beginPath(); ctx.moveTo(-69,4); ctx.bezierCurveTo(-22,9,44,8,88,2); ctx.stroke();
@@ -772,7 +834,7 @@
       ctx.restore();
 
       ctx.fillStyle = hitFlash ? "#fff" : "#b9c8d3";
-      ctx.beginPath(); ctx.moveTo(-18,7); ctx.lineTo(32,47); ctx.lineTo(61,43); ctx.lineTo(17,5); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-18,7); ctx.lineTo(32,47); ctx.lineTo(61,43); ctx.lineTo(17,5); ctx.closePath(); ctx.fill(); ctx.strokeStyle="#21384d"; ctx.lineWidth=3; ctx.stroke();
       ctx.strokeStyle = "rgba(255,255,255,.52)"; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(-70,-7); ctx.quadraticCurveTo(2,-17,80,-8); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-10,7); ctx.lineTo(33,42); ctx.stroke();
@@ -836,7 +898,7 @@
       const positions=[-49,-35,-21,-7,7,21,35,47];
       positions.forEach((windowX,index)=>{
         const turtleWindow=index===3;
-        const width=turtleWindow?15:9.5, height=turtleWindow?12.5:8;
+        const width=turtleWindow?17:10.5, height=turtleWindow?14.5:8.8;
         ctx.save();ctx.beginPath();ctx.roundRect(windowX-width/2,-9-height/2,width,height,3);ctx.clip();
         const cabinLight=ctx.createLinearGradient(windowX,-9-height/2,windowX,-9+height/2);
         cabinLight.addColorStop(0,turtleWindow?"#fff1b9":"#ffe3a0");
@@ -867,12 +929,12 @@
     }
 
     drawCockpit(ctx, player, time) {
-      ctx.save();ctx.beginPath();ctx.moveTo(51,-15.5);ctx.quadraticCurveTo(75,-16,89,-5);ctx.lineTo(62,1.5);ctx.closePath();ctx.clip();
+      ctx.save();ctx.beginPath();ctx.moveTo(48,-17.5);ctx.quadraticCurveTo(76,-18,92,-5);ctx.lineTo(61,3);ctx.closePath();ctx.clip();
       const cockpitGlow=ctx.createLinearGradient(55,-17,82,1);
       cockpitGlow.addColorStop(0,"#4f7b91");cockpitGlow.addColorStop(.55,"#294c62");cockpitGlow.addColorStop(1,"#152e41");
-      ctx.fillStyle=cockpitGlow;ctx.fillRect(49,-19,43,22);
+      ctx.fillStyle=cockpitGlow;ctx.fillRect(46,-21,48,26);
       const reaction=player.hitReaction>0?Math.sin(time*30)*1.1:0;
-      ctx.translate(reaction,0);
+      ctx.translate(reaction,0);ctx.translate(69,-7);ctx.scale(1.14,1.14);ctx.translate(-69,7);
 
       // Versión simplificada de la capitana de portada: cabello negro lacio,
       // gorra y uniforme comercial legibles incluso a escala de juego.
@@ -898,7 +960,7 @@
       ctx.strokeStyle="rgba(88,46,44,.7)";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(69.5,-6.8);ctx.quadraticCurveTo(70.5,-6.2,71.4,-6.8);ctx.stroke();
       ctx.strokeStyle="#c9836f";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(75,-2.8);ctx.lineTo(82,-.3);ctx.stroke();
       ctx.restore();
-      ctx.strokeStyle="rgba(183,221,239,.88)";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(51,-15.5);ctx.quadraticCurveTo(75,-16,89,-5);ctx.lineTo(62,1.5);ctx.closePath();ctx.stroke();
+      ctx.strokeStyle="#20384d";ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(48,-17.5);ctx.quadraticCurveTo(76,-18,92,-5);ctx.lineTo(61,3);ctx.closePath();ctx.stroke();
       ctx.strokeStyle="rgba(222,242,250,.46)";ctx.beginPath();ctx.moveTo(76,-14);ctx.lineTo(71,-4.5);ctx.stroke();
     }
 
@@ -925,6 +987,9 @@
       this.fuelFill = root.querySelector("#fuel-fill");
       this.fuelTrack = root.querySelector(".fuel-track");
       this.lives = root.querySelector("#lives-value");
+      this.difficulty = root.querySelector("#difficulty-value");
+      this.difficultyFill = root.querySelector("#difficulty-fill");
+      this.difficultyTrack = root.querySelector(".difficulty-track");
       this.region = root.querySelector("#region-label");
       this.message = root.querySelector("#flight-message");
       root.querySelector("#ending-title").textContent = GAME_TEXT.endingTitle;
@@ -945,7 +1010,7 @@
     hideHud() { requestAnimationFrame(() => this.hud.classList.remove("hud--visible")); }
     showPause(visible) { this.showScreen(this.pauseScreen, visible); }
     showEnding() { this.showScreen(this.endingScreen, true); }
-    update(player, dt) {
+    update(player, dt, progress = 0) {
       this.altitude.textContent = `${Math.round(player.position.y * 18).toLocaleString("es-ES")} m`;
       this.distance.textContent = `${(player.position.x / 85).toFixed(0)} km`;
       const fuel = clamp(player.fuel, 0, 100);
@@ -956,7 +1021,12 @@
       const hearts = Array.from({ length: CONFIG.maxLives }, (_, index) => index < player.lives ? "♥" : "♡").join(" ");
       if (this.lives.textContent !== hearts) this.lives.textContent = hearts;
       this.lives.classList.toggle("is-full", player.lives >= CONFIG.maxLives);
+      this.lives.parentElement.classList.toggle("is-hit", player.hitReaction > 0);
       this.lives.parentElement.setAttribute("aria-label", `${player.lives} de ${CONFIG.maxLives} vidas disponibles`);
+      const difficulty = getDifficulty(progress);
+      this.difficulty.textContent = difficulty.stage;
+      this.difficultyFill.style.width = `${Math.round(difficulty.level * 100)}%`;
+      this.difficultyTrack.setAttribute("aria-valuenow", String(Math.round(difficulty.level * 100)));
       this.regionTimer -= dt; this.messageTimer -= dt;
       if (this.regionTimer <= 0) this.region.classList.remove("region-label--visible");
       if (this.messageTimer <= 0) this.message.classList.remove("flight-message--visible");
@@ -1194,7 +1264,7 @@
         this.player.update(dt, this.input.keys, this.progress, this.view.width, true);
         this.camera.update(dt, this.player, this.progress, true);
         this.constrainPlayerToView();
-        this.obstacles.update(dt, this.player, this.progress, () => this.handleCollision());
+        this.obstacles.update(dt, this.player, this.progress, item => this.handleCollision(item));
         this.pickups.update(dt, this.player, this.progress, item => this.handleLifePickup(item));
         this.updateLandmarks();
         if (this.progress >= CONFIG.approachAt) this.beginApproach();
@@ -1214,7 +1284,7 @@
         this.updateMoon(dt);
       }
       this.particles.update(dt);
-      this.ui.update(this.player, dt);
+      this.ui.update(this.player, dt, this.progress);
       this.root.dataset.gameState = this.state;
       this.root.dataset.runElapsed = this.runElapsed.toFixed(3);
       this.root.dataset.progress = this.progress.toFixed(4);
@@ -1225,7 +1295,8 @@
       if (landmark && this.progress >= landmark.at - .018) { this.ui.announceRegion(landmark.name); this.nextLandmark += 1; }
     }
 
-    handleCollision() {
+    handleCollision(item) {
+      if (item) item.hit = .34;
       this.camera.hit();
       const point = this.getPlayerScreenPosition();
       this.particles.emit(point.x, point.y, { count: 16, color: "255,204,128", speed: 95, life: .75, size: 4 });
@@ -1503,12 +1574,30 @@
 
     renderObstacles(ctx) {
       const playerPoint = this.getPlayerScreenPosition();
+      let warnings = 0;
+      const difficulty = getDifficulty(this.progress);
+      const warningLimit = Math.min(2, difficulty.maxActive - 2);
       for (const item of this.obstacles.items) {
         const x = playerPoint.x + (item.x - this.player.position.x);
         const y = this.view.height * .53 - (item.y - this.camera.altitude) * .38;
+        if (x > this.view.width + 20 && x < this.view.width + difficulty.warningLead && y > 45 && y < this.view.height - 45 && warnings < warningLimit) {
+          this.drawObstacleWarning(ctx, item, y, warnings);
+          warnings += 1;
+        }
         if (x < -140 || x > this.view.width + 140 || y < -140 || y > this.view.height + 140) continue;
         this.drawObstacle(ctx, item, x, y);
       }
+    }
+
+    drawObstacleWarning(ctx, item, y, index) {
+      const colors = { bird: "#4fc3b4", flock: "#4fc3b4", balloon: "#e7795c", weather: "#f0c64f", storm: "#7667aa", meteor: "#ef704c", satellite: "#5ba6cb" };
+      const pulse = this.reducedMotion ? 1 : .88 + Math.sin(this.time * 7 + index) * .12;
+      const x = this.view.width - 28 - index * 7;
+      ctx.save();ctx.translate(x,y);ctx.scale(pulse,pulse);
+      ctx.fillStyle=colors[item.type]||"#f0c64f";ctx.strokeStyle="#111c31";ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(0,-21);ctx.lineTo(-25,0);ctx.lineTo(0,21);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#fff1b4";ctx.beginPath();ctx.arc(-5,0,4.5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
     }
 
     renderPickups(ctx) {
@@ -1525,7 +1614,8 @@
       const pulse = this.reducedMotion ? 1 : 1 + Math.sin(item.phase * 1.7) * .07;
       ctx.save();ctx.translate(x,y);ctx.scale(pulse,pulse);
       const aura=ctx.createRadialGradient(0,0,4,0,0,43);aura.addColorStop(0,"rgba(255,229,139,.58)");aura.addColorStop(.58,"rgba(99,220,212,.18)");aura.addColorStop(1,"rgba(99,220,212,0)");ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,43,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="rgba(17,49,66,.92)";ctx.strokeStyle="#e6b956";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(20,-13);ctx.lineTo(18,12);ctx.quadraticCurveTo(0,31,-18,12);ctx.lineTo(-20,-13);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#265965";ctx.strokeStyle="#111c31";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(20,-13);ctx.lineTo(18,12);ctx.quadraticCurveTo(0,31,-18,12);ctx.lineTo(-20,-13);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#e6b956";ctx.lineWidth=2;ctx.stroke();
       ctx.strokeStyle="rgba(119,230,224,.78)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(14,-10);ctx.lineTo(12,9);ctx.quadraticCurveTo(0,22,-12,9);ctx.lineTo(-14,-10);ctx.closePath();ctx.stroke();
       ctx.fillStyle="#ffcd69";ctx.shadowColor="#ffcd69";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(0,13);ctx.bezierCurveTo(-21,-1,-12,-15,0,-7);ctx.bezierCurveTo(12,-15,21,-1,0,13);ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle="#fff3bf";ctx.font="800 9px Segoe UI, sans-serif";ctx.textAlign="center";ctx.fillText("+1",0,27);
@@ -1534,16 +1624,21 @@
 
     drawObstacle(ctx, item, x, y) {
       ctx.save(); ctx.translate(x, y);
-      const visualScale = clamp(item.intensity || 1, .82, 1.14);
+      const visualScale = clamp(item.intensity || 1, .96, 1.18);
       ctx.scale(visualScale, visualScale);
+      if (item.hit > 0) {
+        ctx.filter = "brightness(1.65) saturate(1.35)";
+        ctx.shadowColor = "rgba(255,214,112,.95)";
+        ctx.shadowBlur = 18;
+      }
       const bob = Math.sin(item.phase) * 5;
       if (item.type === "bird" || item.type === "flock") {
         const count = item.type === "flock" ? 4 : 1;
         for (let i=0;i<count;i+=1) {
           const ox=(i%2)*34-(i>1?19:0), oy=Math.floor(i/2)*26, flap=Math.sin(item.phase+i)*7;
           ctx.save();ctx.translate(ox,oy+bob);
-          const wing=ctx.createLinearGradient(0,-18,0,8);wing.addColorStop(0,"#596174");wing.addColorStop(1,"#171d32");
-          ctx.fillStyle=wing;ctx.strokeStyle="#101526";ctx.lineWidth=2;ctx.lineJoin="round";
+           const wing=ctx.createLinearGradient(0,-18,0,8);wing.addColorStop(0,"#547f91");wing.addColorStop(1,"#1b2947");
+           ctx.fillStyle=wing;ctx.strokeStyle="#10182c";ctx.lineWidth=3;ctx.lineJoin="round";
           ctx.beginPath();ctx.moveTo(-1,1);ctx.quadraticCurveTo(-12,-17-flap,-22,-8);ctx.quadraticCurveTo(-11,-1,-5,6);ctx.quadraticCurveTo(0,10,5,6);ctx.quadraticCurveTo(12,-3,22,-8+flap*.35);ctx.quadraticCurveTo(13,-15+flap,1,1);ctx.closePath();ctx.fill();ctx.stroke();
           ctx.fillStyle="#273049";ctx.beginPath();ctx.ellipse(1,4,8,4,-.05,0,Math.PI*2);ctx.fill();
           ctx.fillStyle="#f4bc63";ctx.beginPath();ctx.moveTo(8,2);ctx.lineTo(15,4);ctx.lineTo(8,6);ctx.closePath();ctx.fill();
@@ -1553,23 +1648,29 @@
       } else if (item.type === "balloon" || item.type === "weather") {
         const balloon=ctx.createRadialGradient(-8,bob-21,3,0,bob-9,34);
         balloon.addColorStop(0,"#ffe5a2");balloon.addColorStop(.38,item.type === "weather"?"#e6c467":"#e77772");balloon.addColorStop(1,item.type === "weather"?"#8b6b3d":"#803b55");
-        ctx.fillStyle=balloon;ctx.strokeStyle="#4e3444";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,bob-10,25,32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle=balloon;ctx.strokeStyle="#172039";ctx.lineWidth=3.5;ctx.beginPath();ctx.ellipse(0,bob-10,25,32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
         ctx.save();ctx.beginPath();ctx.ellipse(0,bob-10,24,31,0,0,Math.PI*2);ctx.clip();ctx.fillStyle="rgba(39,100,127,.32)";ctx.fillRect(-5,bob-43,10,66);ctx.fillStyle="rgba(255,232,167,.2)";ctx.fillRect(-17,bob-42,7,62);ctx.restore();
-        ctx.strokeStyle="#a88967";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-11,bob+17);ctx.lineTo(-7,bob+38);ctx.moveTo(11,bob+17);ctx.lineTo(7,bob+38);ctx.stroke();
-        const basket=ctx.createLinearGradient(0,bob+34,0,bob+47);basket.addColorStop(0,"#a9784f");basket.addColorStop(1,"#573b34");ctx.fillStyle=basket;ctx.fillRect(-9,bob+36,18,11);ctx.strokeRect(-9,bob+36,18,11);
+        if(item.type === "weather"){
+          ctx.strokeStyle="#172039";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,bob-43);ctx.lineTo(0,bob-58);ctx.moveTo(-7,bob-54);ctx.lineTo(7,bob-54);ctx.stroke();
+          ctx.fillStyle="#3d6f86";ctx.strokeStyle="#172039";ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(-13,bob+25,26,21,5);ctx.fill();ctx.stroke();
+          ctx.fillStyle="#ffe475";ctx.beginPath();ctx.arc(0,bob+35,4,0,Math.PI*2);ctx.fill();
+        }else{
+          ctx.strokeStyle="#745339";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-11,bob+17);ctx.lineTo(-7,bob+38);ctx.moveTo(11,bob+17);ctx.lineTo(7,bob+38);ctx.stroke();
+          const basket=ctx.createLinearGradient(0,bob+34,0,bob+47);basket.addColorStop(0,"#b47a45");basket.addColorStop(1,"#613d2f");ctx.fillStyle=basket;ctx.strokeStyle="#172039";ctx.lineWidth=3;ctx.fillRect(-9,bob+36,18,11);ctx.strokeRect(-9,bob+36,18,11);
+        }
       } else if (item.type === "storm") {
-        ctx.save();ctx.shadowColor="rgba(116,112,220,.48)";ctx.shadowBlur=16;this.world.drawCloud(ctx, 0, bob, 64, .94);ctx.restore();
-        ctx.strokeStyle="rgba(121,177,218,.48)";ctx.lineWidth=2;for(let rain=-35;rain<=42;rain+=19){ctx.beginPath();ctx.moveTo(rain,bob+22);ctx.lineTo(rain-7,bob+42);ctx.stroke();}
+        ctx.save();ctx.translate(0,bob);ctx.shadowColor="rgba(95,84,177,.42)";ctx.shadowBlur=14;ctx.fillStyle="#4d4c78";ctx.strokeStyle="#151b34";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(-37,2,29,22,0,0,Math.PI*2);ctx.ellipse(-9,-13,38,31,0,0,Math.PI*2);ctx.ellipse(28,-4,35,27,0,0,Math.PI*2);ctx.ellipse(45,8,23,18,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
+        ctx.strokeStyle="#73b6d0";ctx.lineWidth=2.5;for(let rain=-35;rain<=42;rain+=19){ctx.beginPath();ctx.moveTo(rain,bob+22);ctx.lineTo(rain-8,bob+44);ctx.stroke();}
         const bolt=ctx.createLinearGradient(0,bob+19,0,bob+70);bolt.addColorStop(0,"#fff5a8");bolt.addColorStop(1,"#ee9e3d");ctx.fillStyle=bolt;ctx.shadowColor="#ffe68e";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(4,bob+18);ctx.lineTo(-8,bob+46);ctx.lineTo(5,bob+42);ctx.lineTo(-3,bob+67);ctx.lineTo(22,bob+34);ctx.lineTo(8,bob+36);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
       } else if (item.type === "meteor") {
         const tail=ctx.createLinearGradient(-100,0,18,0);tail.addColorStop(0,"rgba(229,64,89,0)");tail.addColorStop(.58,"rgba(241,104,73,.28)");tail.addColorStop(1,"rgba(255,220,125,.84)");ctx.fillStyle=tail;ctx.beginPath();ctx.moveTo(-104,-16);ctx.lineTo(12,-20);ctx.lineTo(15,19);ctx.lineTo(-104,9);ctx.fill();
         ctx.strokeStyle="rgba(255,205,102,.36)";ctx.lineWidth=3;for(let spark=0;spark<3;spark++){ctx.beginPath();ctx.moveTo(-72-spark*8,-9+spark*9);ctx.lineTo(-31-spark*4,-6+spark*6);ctx.stroke();}
-        const rock=ctx.createRadialGradient(5,-7,2,12,0,20);rock.addColorStop(0,"#d7b190");rock.addColorStop(.45,"#8c675f");rock.addColorStop(1,"#4e3b49");ctx.fillStyle=rock;ctx.strokeStyle="#342d3c";ctx.lineWidth=2;ctx.beginPath();ctx.arc(12,0,19,0,Math.PI*2);ctx.fill();ctx.stroke();
+        const rock=ctx.createRadialGradient(5,-7,2,12,0,20);rock.addColorStop(0,"#ffd188");rock.addColorStop(.45,"#b6634e");rock.addColorStop(1,"#533848");ctx.fillStyle=rock;ctx.strokeStyle="#241e35";ctx.lineWidth=3.5;ctx.beginPath();ctx.arc(12,0,19,0,Math.PI*2);ctx.fill();ctx.stroke();
         ctx.fillStyle="rgba(47,35,46,.5)";ctx.beginPath();ctx.ellipse(6,-4,5,3,.4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(17,6,3.5,0,Math.PI*2);ctx.fill();
       } else {
-        ctx.rotate(.22);const body=ctx.createLinearGradient(0,-12,0,12);body.addColorStop(0,"#edf5f7");body.addColorStop(1,"#70869a");ctx.fillStyle=body;ctx.strokeStyle="#32465c";ctx.lineWidth=2;ctx.fillRect(-23,-10,46,20);ctx.strokeRect(-23,-10,46,20);
+        ctx.rotate(.22);const body=ctx.createLinearGradient(0,-12,0,12);body.addColorStop(0,"#edf5f7");body.addColorStop(1,"#70869a");ctx.fillStyle=body;ctx.strokeStyle="#17233a";ctx.lineWidth=3.5;ctx.fillRect(-23,-10,46,20);ctx.strokeRect(-23,-10,46,20);
         ctx.fillStyle="#365d98";ctx.fillRect(-63,-19,36,38);ctx.fillRect(27,-19,36,38);ctx.strokeStyle="rgba(153,213,234,.58)";ctx.lineWidth=1;for(let gx=-59;gx<-28;gx+=8){ctx.beginPath();ctx.moveTo(gx,-18);ctx.lineTo(gx,18);ctx.stroke();}for(let gx=31;gx<63;gx+=8){ctx.beginPath();ctx.moveTo(gx,-18);ctx.lineTo(gx,18);ctx.stroke();}for(let gy=-10;gy<19;gy+=10){ctx.beginPath();ctx.moveTo(-62,gy);ctx.lineTo(-28,gy);ctx.moveTo(28,gy);ctx.lineTo(62,gy);ctx.stroke();}
-        ctx.fillStyle="#f3cc78";ctx.shadowColor="#f3cc78";ctx.shadowBlur=8;ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle="#cbdce6";ctx.beginPath();ctx.arc(0,-13,11,Math.PI,Math.PI*2);ctx.stroke();
+        ctx.fillStyle="#f3cc78";ctx.shadowColor="#f3cc78";ctx.shadowBlur=8;ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle="#d7e5eb";ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-13,11,Math.PI,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(0,-34);ctx.stroke();ctx.fillStyle="#ef6d55";ctx.beginPath();ctx.arc(0,-36,3,0,Math.PI*2);ctx.fill();
       }
       ctx.restore();
     }
